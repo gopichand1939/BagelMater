@@ -1,6 +1,7 @@
 const ADMIN_REALTIME_EVENT_PREFIX = "admin:realtime";
 
 export const ADMIN_REALTIME_EVENT_TYPES = {
+  CONNECTION_OPENED: "connection.opened",
   ORDER_UPDATED: "order.updated",
   PAYMENT_UPDATED: "payment.updated",
   CUSTOMER_UPDATED: "customer.updated",

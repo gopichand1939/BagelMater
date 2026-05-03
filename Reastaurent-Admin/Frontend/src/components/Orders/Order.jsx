@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -413,6 +413,7 @@ const renderPaymentFlowPill = (paymentStatus = "") => {
 
 function Order() {
   const NEW_ORDER_HIGHLIGHT_MS = 30000;
+  const hasSeenRealtimeConnectionRef = useRef(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [data, setData] = useState([]);
@@ -533,6 +534,20 @@ function Order() {
         }
 
         applyRealtimeOrderChange(change);
+        fetchData(currentPage, pageSize);
+      }
+    );
+  }, [currentPage, pageSize]);
+
+  useEffect(() => {
+    return subscribeToAdminRealtimeEvent(
+      ADMIN_REALTIME_EVENT_TYPES.CONNECTION_OPENED,
+      () => {
+        if (!hasSeenRealtimeConnectionRef.current) {
+          hasSeenRealtimeConnectionRef.current = true;
+          return;
+        }
+
         fetchData(currentPage, pageSize);
       }
     );

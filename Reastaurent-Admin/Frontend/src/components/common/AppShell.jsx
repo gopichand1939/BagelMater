@@ -56,6 +56,7 @@ function NotificationBellIcon(props) {
 function AppShell() {
   const NEW_NOTIFICATION_HIGHLIGHT_MS = 30000;
   const LIVE_POPUP_DURATION_MS = 8000;
+  const FRESH_NOTIFICATION_ALERT_WINDOW_MS = 15000;
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 960);
@@ -105,6 +106,26 @@ function AppShell() {
       setLivePopupNotification(null);
       livePopupTimeoutRef.current = null;
     }, LIVE_POPUP_DURATION_MS);
+  };
+
+  const isFreshNotification = (notification, fallbackTimestamp = null) => {
+    const rawTimestamp =
+      notification?.created_at ||
+      notification?.updated_at ||
+      fallbackTimestamp ||
+      null;
+
+    if (!rawTimestamp) {
+      return false;
+    }
+
+    const parsedTimestamp = new Date(rawTimestamp).getTime();
+
+    if (!Number.isFinite(parsedTimestamp)) {
+      return false;
+    }
+
+    return Date.now() - parsedTimestamp <= FRESH_NOTIFICATION_ALERT_WINDOW_MS;
   };
 
   const refreshUnreadSummary = async ({ shouldPlayAdminBeep = false } = {}) => {
@@ -232,9 +253,7 @@ function AppShell() {
         String(change?.source || "").toLowerCase() !== "admin-backend";
 
       if (shouldRefreshNotificationsFromOrderEvent) {
-        await refreshUnreadSummary({
-          shouldPlayAdminBeep: true,
-        });
+        await refreshUnreadSummary();
       }
     },
     onNotificationUpdate: async (change) => {
@@ -257,6 +276,15 @@ function AppShell() {
           );
 
           if (createdNotification) {
+            if (
+              isFreshNotification(
+                createdNotification,
+                change?.emittedAt || change?.entityData?.created_at
+              )
+            ) {
+              startAdminNotificationAlert();
+            }
+
             if (
               String(createdNotification.entity || "").toLowerCase() === "order" &&
               String(createdNotification.action || "").toLowerCase() === "created" &&

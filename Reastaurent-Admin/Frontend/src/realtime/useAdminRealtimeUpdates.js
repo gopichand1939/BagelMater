@@ -94,6 +94,12 @@ export const useAdminRealtimeUpdates = ({
 
       socket = new WebSocket(socketUrl);
 
+      socket.addEventListener("open", () => {
+        emitAdminRealtimeEvent(ADMIN_REALTIME_EVENT_TYPES.CONNECTION_OPENED, {
+          connectedAt: new Date().toISOString(),
+        });
+      });
+
       socket.addEventListener("message", (event) => {
         try {
           const message = JSON.parse(event.data);
