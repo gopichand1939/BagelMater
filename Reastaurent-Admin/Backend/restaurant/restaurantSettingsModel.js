@@ -23,6 +23,7 @@ const ensureRestaurantSettingsTable = async () => {
       schedule_start_time TIME,
       schedule_end_time TIME,
       weekly_schedule JSONB NOT NULL DEFAULT '{}'::jsonb,
+      special_dates JSONB NOT NULL DEFAULT '{}'::jsonb,
       timezone_name VARCHAR(100) NOT NULL DEFAULT 'Asia/Kolkata',
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -39,6 +40,7 @@ const ensureRestaurantSettingsTable = async () => {
     ADD COLUMN IF NOT EXISTS schedule_start_time TIME,
     ADD COLUMN IF NOT EXISTS schedule_end_time TIME,
     ADD COLUMN IF NOT EXISTS weekly_schedule JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ADD COLUMN IF NOT EXISTS special_dates JSONB NOT NULL DEFAULT '{}'::jsonb,
     ADD COLUMN IF NOT EXISTS timezone_name VARCHAR(100) NOT NULL DEFAULT 'Asia/Kolkata',
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
@@ -68,6 +70,23 @@ const normalizeWeeklySchedule = (value) => {
   return DEFAULT_WEEKLY_SCHEDULE;
 };
 
+const normalizeJsonObject = (value) => {
+  if (!value) {
+    return {};
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  return typeof value === "object" && !Array.isArray(value) ? value : {};
+};
+
 const normalizeRow = (row) => {
   if (!row) {
     return null;
@@ -79,6 +98,7 @@ const normalizeRow = (row) => {
     manual_is_active: Number(row.manual_is_active),
     schedule_enabled: Number(row.schedule_enabled),
     weekly_schedule: normalizeWeeklySchedule(row.weekly_schedule),
+    special_dates: normalizeJsonObject(row.special_dates),
   };
 };
 
@@ -92,6 +112,7 @@ const defaultSettings = (adminId) => ({
   schedule_start_time: null,
   schedule_end_time: null,
   weekly_schedule: DEFAULT_WEEKLY_SCHEDULE,
+  special_dates: {},
   timezone_name: "Asia/Kolkata",
   created_at: null,
   updated_at: null,
@@ -123,6 +144,7 @@ const restaurantSettingsModel = {
     scheduleStartTime,
     scheduleEndTime,
     weeklySchedule,
+    specialDates,
     timezoneName,
   }) => {
     const query = `
@@ -136,9 +158,10 @@ const restaurantSettingsModel = {
         schedule_start_time,
         schedule_end_time,
         weekly_schedule,
+        special_dates,
         timezone_name
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       ON CONFLICT (admin_id)
       DO UPDATE SET
         institution_name = EXCLUDED.institution_name,
@@ -149,6 +172,7 @@ const restaurantSettingsModel = {
         schedule_start_time = EXCLUDED.schedule_start_time,
         schedule_end_time = EXCLUDED.schedule_end_time,
         weekly_schedule = EXCLUDED.weekly_schedule,
+        special_dates = EXCLUDED.special_dates,
         timezone_name = EXCLUDED.timezone_name,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *;
@@ -164,6 +188,7 @@ const restaurantSettingsModel = {
       scheduleStartTime,
       scheduleEndTime,
       JSON.stringify(weeklySchedule || DEFAULT_WEEKLY_SCHEDULE),
+      JSON.stringify(specialDates || {}),
       timezoneName,
     ];
 

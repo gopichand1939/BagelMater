@@ -68,6 +68,22 @@ const getCurrentDayInTimezone = (timezoneName) => {
   }
 };
 
+const getCurrentDateInTimezone = (timezoneName) => {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezoneName,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const partMap = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${partMap.year}-${partMap.month}-${partMap.day}`;
+  } catch (_error) {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }
+};
+
 const normalizeTime = (value) => {
   if (!value) {
     return null;
@@ -129,6 +145,50 @@ const validateWeeklySchedule = (schedule) => {
   return null;
 };
 
+const normalizeSpecialDates = (input) => {
+  const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+  const normalized = {};
+
+  Object.entries(source).forEach(([dateKey, value]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !value || typeof value !== "object") {
+      return;
+    }
+
+    const mode = value.mode || value.type || "weekly";
+    const startTime = normalizeTime(value.start_time || value.open_time);
+    const endTime = normalizeTime(value.end_time || value.close_time);
+
+    if (mode === "closed" || mode === "open_24_hours" || mode === "weekly") {
+      normalized[dateKey] = { mode };
+      return;
+    }
+
+    if (mode === "custom" && startTime && endTime) {
+      normalized[dateKey] = {
+        mode: "custom",
+        start_time: startTime.slice(0, 5),
+        end_time: endTime.slice(0, 5),
+      };
+    }
+  });
+
+  return normalized;
+};
+
+const validateSpecialDates = (specialDates) => {
+  for (const [dateKey, setting] of Object.entries(specialDates)) {
+    if (setting.mode !== "custom") {
+      continue;
+    }
+
+    if (!isValidTimeString(setting.start_time) || !isValidTimeString(setting.end_time)) {
+      return `${dateKey} has an invalid custom time. Use HH:MM`;
+    }
+  }
+
+  return null;
+};
+
 const isWithinScheduledWindow = (currentTime, startTime, endTime) => {
   if (!startTime || !endTime) {
     return false;
@@ -148,6 +208,7 @@ const isWithinScheduledWindow = (currentTime, startTime, endTime) => {
 const buildSettingsResponse = (settings) => {
   const timezoneName = settings.timezone_name || "Asia/Kolkata";
   const currentTime = getCurrentTimeInTimezone(timezoneName);
+  const currentDate = getCurrentDateInTimezone(timezoneName);
   const currentDay = getCurrentDayInTimezone(timezoneName);
   const fallbackStartTime = normalizeTime(settings.schedule_start_time);
   const fallbackEndTime = normalizeTime(settings.schedule_end_time);
@@ -157,21 +218,41 @@ const buildSettingsResponse = (settings) => {
     fallbackEndTime
   );
   const todaySchedule = weeklySchedule[currentDay];
+  const specialDates = normalizeSpecialDates(settings.special_dates);
+  const todaySpecialDate = specialDates[currentDate] || null;
   const scheduleEnabled = Number(settings.schedule_enabled) === 1;
   const manualOverrideEnabled = Number(settings.manual_override_enabled) === 1;
   const manualIsActive = Number(settings.manual_is_active) === 1;
 
-  const scheduleIsActive =
+  const weeklyScheduleIsActive =
     scheduleEnabled && todaySchedule?.enabled && todaySchedule.start_time && todaySchedule.end_time
       ? isWithinScheduledWindow(currentTime, `${todaySchedule.start_time}:00`, `${todaySchedule.end_time}:00`)
       : false;
 
+  let specialDateIsActive = null;
+  if (todaySpecialDate?.mode === "closed") {
+    specialDateIsActive = false;
+  } else if (todaySpecialDate?.mode === "open_24_hours") {
+    specialDateIsActive = true;
+  } else if (todaySpecialDate?.mode === "custom") {
+    specialDateIsActive = isWithinScheduledWindow(
+      currentTime,
+      `${todaySpecialDate.start_time}:00`,
+      `${todaySpecialDate.end_time}:00`
+    );
+  }
+
+  const scheduleIsActive = specialDateIsActive === null ? weeklyScheduleIsActive : specialDateIsActive;
   const currentStatus = manualOverrideEnabled || !scheduleEnabled ? manualIsActive : scheduleIsActive;
   const currentStatusSource = manualOverrideEnabled
-    ? "manual override"
-    : scheduleEnabled
-      ? `${currentDay} schedule`
-      : "manual";
+    ? manualIsActive
+      ? "force open"
+      : "force closed"
+    : !scheduleEnabled
+      ? "manual"
+      : todaySpecialDate && todaySpecialDate.mode !== "weekly"
+        ? "special date"
+        : "weekly schedule";
 
   return {
     ...settings,
@@ -179,11 +260,14 @@ const buildSettingsResponse = (settings) => {
     schedule_start_time: fallbackStartTime ? fallbackStartTime.slice(0, 5) : "",
     schedule_end_time: fallbackEndTime ? fallbackEndTime.slice(0, 5) : "",
     weekly_schedule: weeklySchedule,
+    special_dates: specialDates,
     current_status: currentStatus ? 1 : 0,
     current_status_source: currentStatusSource,
+    current_date: currentDate,
     current_time: currentTime.slice(0, 5),
     current_day: currentDay,
     today_schedule: todaySchedule || null,
+    today_special_date: todaySpecialDate,
     schedule_is_active_now: scheduleIsActive ? 1 : 0,
   };
 };
@@ -216,6 +300,7 @@ const updateRestaurantSettings = async (req, res) => {
       schedule_start_time,
       schedule_end_time,
       weekly_schedule,
+      special_dates,
       timezone_name,
     } = req.body;
 
@@ -236,6 +321,7 @@ const updateRestaurantSettings = async (req, res) => {
       normalizedStartTime,
       normalizedEndTime
     );
+    const normalizedSpecialDates = normalizeSpecialDates(special_dates);
 
     if (normalizedScheduleEnabled) {
       const scheduleError = validateWeeklySchedule(normalizedWeeklySchedule);
@@ -245,6 +331,14 @@ const updateRestaurantSettings = async (req, res) => {
           message: scheduleError,
         });
       }
+    }
+
+    const specialDatesError = validateSpecialDates(normalizedSpecialDates);
+    if (specialDatesError) {
+      return res.status(400).json({
+        success: false,
+        message: specialDatesError,
+      });
     }
 
     const settings = await restaurantSettingsModel.upsertByAdminId({
@@ -257,6 +351,7 @@ const updateRestaurantSettings = async (req, res) => {
       scheduleStartTime: normalizedScheduleEnabled ? normalizedStartTime : null,
       scheduleEndTime: normalizedScheduleEnabled ? normalizedEndTime : null,
       weeklySchedule: normalizedWeeklySchedule,
+      specialDates: normalizedSpecialDates,
       timezoneName: timezone_name ? String(timezone_name).trim() : "Asia/Kolkata",
     });
 
