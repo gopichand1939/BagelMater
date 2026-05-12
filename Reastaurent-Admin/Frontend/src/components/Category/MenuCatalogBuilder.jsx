@@ -1206,23 +1206,9 @@ function MenuCatalogBuilder() {
               <div className="grid h-16 w-16 place-items-center rounded-[8px] bg-brand-500 text-3xl text-white">
                 <MdRestaurantMenu />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="m-0 text-[0.78rem] font-extrabold uppercase tracking-[0.16em] text-brand-600">
-                  Same page flow
-                </p>
-                <h2 className="m-0 mt-1 text-[1.7rem] font-extrabold text-text-strong">
-                  Open a category, then manage its food items right there.
-                </h2>
-                <p className="m-0 mt-2 max-w-[82ch] text-[0.98rem] leading-7 text-text-muted">
-                  No table, no page jumping. A restaurant owner can create categories, add items,
-                  edit prices, upload photos, and hide unavailable food from this single screen.
-                </p>
-              </div>
-            </div>
-          </Card>
+       
 
-          <Card className="content-start">
-            <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+     <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
               <div>
                 <strong className="block text-[1.7rem] text-text-strong">{categories.length}</strong>
                 <span className="text-[0.78rem] font-bold uppercase tracking-wide text-text-muted">
@@ -1248,7 +1234,12 @@ function MenuCatalogBuilder() {
                 </span>
               </div>
             </div>
+
+
+            </div>
           </Card>
+
+ 
         </div>
 
         <div className="mt-5 grid gap-4">
