@@ -15,13 +15,14 @@ const requireAdminAuth = async (req, res, next) => {
     const token = authorization.slice(7).trim();
     const payload = verifyAccessToken(token);
     const admin = await adminModel.getAdminForSessionValidation(payload.sub);
+    const session = await adminModel.getSessionByAdminAndSessionId(payload.sub, payload.sid);
 
     if (
       !admin ||
       Number(admin.is_active) !== 1 ||
-      admin.current_session_id !== payload.sid ||
-      !admin.session_expires_at ||
-      new Date(admin.session_expires_at) <= new Date()
+      !session ||
+      !session.session_expires_at ||
+      new Date(session.session_expires_at) <= new Date()
     ) {
       return res.status(401).json({
         success: false,

@@ -8,6 +8,9 @@ import {
 } from "./adminRealtimeEvents";
 
 const RECONNECT_DELAY_MS = 2000;
+const MAX_CONSECUTIVE_FAILURES = 6;
+const isLocalHostName = (host = "") =>
+  /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(String(host || ""));
 
 const buildAuthenticatedWebSocketUrl = (baseUrl, accessToken) => {
   if (!baseUrl || !accessToken) {
@@ -30,6 +33,24 @@ const buildAuthenticatedWebSocketUrl = (baseUrl, accessToken) => {
   } catch (_error) {
     const separator = baseUrl.includes("?") ? "&" : "?";
     return `${baseUrl}${separator}token=${encodeURIComponent(accessToken)}`;
+  }
+};
+
+const withAlternateProtocol = (urlValue) => {
+  try {
+    const nextUrl = new URL(
+      urlValue,
+      typeof window === "undefined" ? "http://localhost" : window.location.origin
+    );
+
+    if (nextUrl.protocol === "ws:") {
+      nextUrl.protocol = "wss:";
+      return nextUrl.toString();
+    }
+
+    return "";
+  } catch (_error) {
+    return "";
   }
 };
 
@@ -68,9 +89,17 @@ export const useAdminRealtimeUpdates = ({
     let socket = null;
     let reconnectTimer = null;
     let isDisposed = false;
+    let consecutiveFailures = 0;
+    let triedProtocolFallback = false;
+    let pendingWsBaseOverride = "";
 
     const scheduleReconnect = () => {
-      if (isDisposed || reconnectTimer) {
+      if (isDisposed || reconnectTimer || consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          console.warn(
+            "Admin realtime updates disabled after repeated websocket failures. Check WS endpoint/proxy configuration."
+          );
+        }
         return;
       }
 
@@ -83,7 +112,7 @@ export const useAdminRealtimeUpdates = ({
     const connect = () => {
       const accessToken = getAccessToken();
       const socketUrl = buildAuthenticatedWebSocketUrl(
-        ADMIN_UPDATES_WS_URL,
+        pendingWsBaseOverride || ADMIN_UPDATES_WS_URL,
         accessToken
       );
 
@@ -95,6 +124,7 @@ export const useAdminRealtimeUpdates = ({
       socket = new WebSocket(socketUrl);
 
       socket.addEventListener("open", () => {
+        consecutiveFailures = 0;
         emitAdminRealtimeEvent(ADMIN_REALTIME_EVENT_TYPES.CONNECTION_OPENED, {
           connectedAt: new Date().toISOString(),
         });
@@ -146,11 +176,34 @@ export const useAdminRealtimeUpdates = ({
           return;
         }
 
+        consecutiveFailures += 1;
+
         if (event.code === 1008) {
           void ensureFreshAccessToken().finally(() => {
             scheduleReconnect();
           });
           return;
+        }
+
+        if (!triedProtocolFallback) {
+          try {
+            const candidate = new URL(
+              socketUrl,
+              typeof window === "undefined" ? "http://localhost" : window.location.origin
+            );
+            const remoteHost = !isLocalHostName(candidate.hostname);
+            if (remoteHost && candidate.protocol === "ws:") {
+              const alternate = withAlternateProtocol(socketUrl);
+              if (alternate) {
+                triedProtocolFallback = true;
+                pendingWsBaseOverride = alternate.replace(/\?.*$/, "");
+                scheduleReconnect();
+                return;
+              }
+            }
+          } catch (_error) {
+            // ignored; continue normal reconnect path
+          }
         }
 
         scheduleReconnect();

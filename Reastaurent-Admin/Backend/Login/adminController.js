@@ -121,10 +121,12 @@ const loginAdmin = async (req, res) => {
     const refreshExpiryDate = getRefreshTokenExpiryDate();
     const accessToken = generateAccessToken(admin, sessionId);
     const refreshToken = generateRefreshToken(admin, sessionId);
-    const savedAdmin = await adminModel.updateLoginSession(
+    const savedAdmin = await adminModel.updateLastLoginAt(admin.id);
+    await adminModel.upsertSession(
       admin.id,
       sessionId,
       hashToken(refreshToken),
+      refreshExpiryDate,
       refreshExpiryDate
     );
 
@@ -153,17 +155,18 @@ const refreshAdminToken = async (req, res) => {
 
     const payload = verifyRefreshToken(refresh_token);
     const admin = await adminModel.getAdminForSessionValidation(payload.sub);
+    const session = await adminModel.getSessionByAdminAndSessionId(payload.sub, payload.sid);
 
     if (
       !admin ||
       Number(admin.is_active) !== 1 ||
       admin.email !== payload.email ||
-      admin.current_session_id !== payload.sid ||
-      admin.refresh_token_hash !== hashToken(refresh_token) ||
-      !admin.session_expires_at ||
-      new Date(admin.session_expires_at) <= new Date() ||
-      !admin.refresh_token_expires_at ||
-      new Date(admin.refresh_token_expires_at) <= new Date()
+      !session ||
+      session.refresh_token_hash !== hashToken(refresh_token) ||
+      !session.session_expires_at ||
+      new Date(session.session_expires_at) <= new Date() ||
+      !session.refresh_token_expires_at ||
+      new Date(session.refresh_token_expires_at) <= new Date()
     ) {
       return res.status(401).json({
         success: false,
@@ -174,12 +177,14 @@ const refreshAdminToken = async (req, res) => {
     const refreshExpiryDate = getRefreshTokenExpiryDate();
     const accessToken = generateAccessToken(admin, payload.sid);
     const newRefreshToken = generateRefreshToken(admin, payload.sid);
-    const savedAdmin = await adminModel.updateLoginSession(
+    await adminModel.upsertSession(
       admin.id,
       payload.sid,
       hashToken(newRefreshToken),
+      refreshExpiryDate,
       refreshExpiryDate
     );
+    const savedAdmin = await adminModel.getAdminById(admin.id);
 
     return res.status(200).json(
       await buildAuthResponse(

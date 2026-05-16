@@ -4,8 +4,37 @@ export const BACKEND_BASE_URL = (
 const trimTrailingSlash = (value = "") => String(value || "").replace(/\/+$/g, "");
 const getBrowserOrigin = () =>
   typeof window === "undefined" ? "" : window.location.origin;
-const toWebSocketOrigin = (value = "") =>
-  String(value || "").replace(/^http/i, "ws");
+const isLocalHostName = (host = "") =>
+  /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(String(host || ""));
+const toWebSocketOrigin = (value = "") => {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(
+      normalized,
+      typeof window === "undefined" ? "http://localhost" : window.location.origin
+    );
+
+    if (/^wss?:$/i.test(parsed.protocol)) {
+      return `${parsed.protocol}//${parsed.host}`;
+    }
+
+    if (/^https:$/i.test(parsed.protocol)) {
+      return `wss://${parsed.host}`;
+    }
+
+    if (/^http:$/i.test(parsed.protocol)) {
+      return `${isLocalHostName(parsed.hostname) ? "ws" : "wss"}://${parsed.host}`;
+    }
+
+    return normalized.replace(/^http/i, "ws");
+  } catch (_error) {
+    return normalized.replace(/^http/i, "ws");
+  }
+};
 
 export const CATEGORY_CREATE = `${BACKEND_BASE_URL}/category/create_category`;
 export const CATEGORY_LIST = `${BACKEND_BASE_URL}/category/category_list`;

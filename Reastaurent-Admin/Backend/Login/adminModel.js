@@ -40,6 +40,18 @@ const ensureAdminTable = async () => {
 
   await db.query(createTableQuery);
   await db.query(alterTableQuery);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS admin_sessions (
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER NOT NULL REFERENCES admin(id) ON DELETE CASCADE,
+      session_id TEXT NOT NULL UNIQUE,
+      refresh_token_hash TEXT NOT NULL,
+      session_expires_at TIMESTAMPTZ NOT NULL,
+      refresh_token_expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 };
 
 const sanitizeAdmin = (row) => {
@@ -144,14 +156,10 @@ const adminModel = {
     return result.rows[0] || null;
   },
 
-  updateLoginSession: async (id, sessionId, refreshTokenHash, refreshTokenExpiresAt) => {
+  updateLastLoginAt: async (id) => {
     const query = `
       UPDATE admin
       SET
-        current_session_id = $2,
-        session_expires_at = $4,
-        refresh_token_hash = $3,
-        refresh_token_expires_at = $4,
         last_login_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
@@ -170,44 +178,65 @@ const adminModel = {
         updated_at;
     `;
 
-    const result = await db.query(query, [id, sessionId, refreshTokenHash, refreshTokenExpiresAt]);
+    const result = await db.query(query, [id]);
+    return result.rows[0] || null;
+  },
+
+  upsertSession: async (adminId, sessionId, refreshTokenHash, sessionExpiresAt, refreshTokenExpiresAt) => {
+    const query = `
+      INSERT INTO admin_sessions (
+        admin_id,
+        session_id,
+        refresh_token_hash,
+        session_expires_at,
+        refresh_token_expires_at
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (session_id)
+      DO UPDATE SET
+        refresh_token_hash = EXCLUDED.refresh_token_hash,
+        session_expires_at = EXCLUDED.session_expires_at,
+        refresh_token_expires_at = EXCLUDED.refresh_token_expires_at,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *;
+    `;
+
+    const result = await db.query(query, [
+      adminId,
+      sessionId,
+      refreshTokenHash,
+      sessionExpiresAt,
+      refreshTokenExpiresAt,
+    ]);
+    return result.rows[0] || null;
+  },
+
+  getSessionByAdminAndSessionId: async (adminId, sessionId) => {
+    const query = `
+      SELECT *
+      FROM admin_sessions
+      WHERE admin_id = $1
+        AND session_id = $2
+      LIMIT 1;
+    `;
+
+    const result = await db.query(query, [adminId, sessionId]);
     return result.rows[0] || null;
   },
 
   clearSession: async (id, sessionId = null) => {
     const values = [id];
     let query = `
-      UPDATE admin
-      SET
-        current_session_id = NULL,
-        session_expires_at = NULL,
-        refresh_token_hash = NULL,
-        refresh_token_expires_at = NULL,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-        AND is_deleted = 0
+      DELETE FROM admin_sessions
+      WHERE admin_id = $1
     `;
 
     if (sessionId) {
       values.push(sessionId);
-      query += ` AND current_session_id = $2`;
+      query += ` AND session_id = $2`;
     }
 
-    query += `
-      RETURNING
-        id,
-        name,
-        email,
-        phone,
-        profile_image,
-        session_expires_at,
-        last_login_at,
-        is_active,
-        is_deleted,
-        created_at,
-        updated_at;
-    `;
-
+    query += ` RETURNING id;`;
     const result = await db.query(query, values);
     return result.rows[0] || null;
   },
@@ -271,6 +300,7 @@ const adminModel = {
     `;
 
     const result = await db.query(query, [id, passwordHash]);
+    await db.query(`DELETE FROM admin_sessions WHERE admin_id = $1`, [id]);
     return result.rows[0] || null;
   },
 

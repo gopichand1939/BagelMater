@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { getStoredAdminMenuTree } from "../../Utils/authStorage";
 import { getMenuMatchPaths, getMenuRoutePath } from "../../Utils/menuConfig";
 import en from "../../Utils/i18n/en.json";
+import THEME_COLORS from "../../theme/colors";
 
 function DashboardIcon(props) {
   return (
@@ -326,6 +327,7 @@ const simplifyMenuManagement = (menu) => {
 function Sidebar({ collapsed = false, onNavigate, onLogout }) {
   const location = useLocation();
   const [storedMenus, setStoredMenus] = useState(() => getStoredAdminMenuTree());
+  const sidebarColors = THEME_COLORS.sidebar;
 
   useEffect(() => {
     setStoredMenus(getStoredAdminMenuTree());
@@ -381,11 +383,22 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
   };
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--color-sidebar-bg)] px-4 py-[18px] transition-colors duration-300">
+    <div
+      className="flex h-screen min-h-0 flex-col overflow-hidden px-4 py-[18px] transition-colors duration-300"
+      style={{
+        backgroundColor: sidebarColors.panelBackground,
+        borderRight: `1px solid ${sidebarColors.panelBorder}`,
+      }}
+    >
       <div className={`${collapsed ? "grid justify-items-center pb-3 pt-1" : "pb-4"}`}>
-        <div className={`border border-border-subtle bg-[var(--color-sidebar-card)] shadow-[var(--sidebar-shadow)] transition-all duration-300 ${
+        <div className={`transition-all duration-300 ${
           collapsed ? "grid h-14 w-14 place-items-center rounded-2xl" : "rounded-[22px] px-4 py-[18px]"
-        }`}>
+        }`}
+        style={{
+          border: `1px solid ${sidebarColors.panelBorder}`,
+          boxShadow: sidebarColors.panelShadow,
+          backgroundImage: `linear-gradient(135deg, ${sidebarColors.headerGradientStart} 0%, ${sidebarColors.headerGradientEnd} 100%)`,
+        }}>
           {collapsed ? (
             <span className="text-base font-black tracking-tight text-brand-500">{en.sidebar.brand.collapsedName}</span>
           ) : (
@@ -400,26 +413,23 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
         </div>
       </div>
 
-      <nav className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-width:thin] [scrollbar-color:#9ca3af_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 ${collapsed ? "flex flex-col items-center gap-2" : "flex flex-col items-stretch gap-2"}`}>
+      <nav
+        className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-width:thin] [scrollbar-color:#9ca3af_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 ${collapsed ? "flex flex-col items-center gap-2" : "flex flex-col items-stretch gap-2"}`}
+        style={{ backgroundImage: `linear-gradient(to bottom, ${sidebarColors.navGradientStart}, ${sidebarColors.navGradientEnd})` }}
+      >
         {normalizedMenu.map((menu) => {
           const hasChildren = Boolean(menu.children?.length);
           const isOpen = hasChildren ? openMenus[menu.menu_id] || false : false;
           const Icon = iconMap[menu.menu_key] || DefaultIcon;
           const menuLabel = getSidebarLabel(menu);
 
-          const parentClassName = `flex items-center gap-3 font-bold text-left no-underline transition-all duration-200 ${
+          const parentClassName = `relative flex items-center gap-3 font-bold text-left no-underline transition-all duration-200 ${
             collapsed
               ? "h-14 w-14 justify-center rounded-[18px] px-0"
               : "min-h-[54px] w-full justify-start rounded-2xl px-[14px]"
-          } ${
-            menu.isActive
-              ? "translate-x-[2px] bg-brand-500 text-white shadow-[0_10px_20px_rgba(52,211,153,0.18)]"
-              : "bg-transparent text-text-muted hover:text-text-strong"
           }`;
 
-          const iconWrapClassName = `grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${
-            menu.isActive ? "bg-white/20" : "bg-white/5"
-          }`;
+          const iconWrapClassName = "grid h-8 w-8 shrink-0 place-items-center rounded-[10px]";
 
           if (!hasChildren && menu.resolvedPath) {
             return (
@@ -429,8 +439,23 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
                 className={parentClassName}
                 onClick={onNavigate}
                 title={collapsed ? menuLabel : undefined}
+                style={{
+                  transform: menu.isActive ? "translateX(2px)" : undefined,
+                  backgroundColor: menu.isActive ? sidebarColors.activeBackground : THEME_COLORS.common.transparent,
+                  color: menu.isActive ? sidebarColors.activeText : sidebarColors.inactiveText,
+                  boxShadow: menu.isActive ? "0 10px 20px rgba(52,211,153,0.18)" : "none",
+                }}
               >
-                <span className={iconWrapClassName}>
+                {menu.isActive ? (
+                  <span
+                    className="absolute left-0 top-2 h-[70%] w-[3px] rounded-r-full"
+                    style={{ backgroundColor: sidebarColors.activeIndicator }}
+                  />
+                ) : null}
+                <span
+                  className={iconWrapClassName}
+                  style={{ backgroundColor: menu.isActive ? sidebarColors.iconActiveBackground : sidebarColors.iconBackground }}
+                >
                   <Icon className="h-[18px] w-[18px] shrink-0" />
                 </span>
                 {!collapsed ? <span>{menuLabel}</span> : null}
@@ -446,8 +471,23 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
                 onClick={() => handleParentToggle(menu.menu_id)}
                 title={collapsed ? menuLabel : undefined}
                 aria-expanded={collapsed ? false : isOpen}
+                style={{
+                  transform: menu.isActive ? "translateX(2px)" : undefined,
+                  backgroundColor: menu.isActive ? sidebarColors.activeBackground : THEME_COLORS.common.transparent,
+                  color: menu.isActive ? sidebarColors.activeText : sidebarColors.inactiveText,
+                  boxShadow: menu.isActive ? "0 10px 20px rgba(52,211,153,0.18)" : "none",
+                }}
               >
-                <span className={iconWrapClassName}>
+                {menu.isActive ? (
+                  <span
+                    className="absolute left-0 top-2 h-[70%] w-[3px] rounded-r-full"
+                    style={{ backgroundColor: sidebarColors.activeIndicator }}
+                  />
+                ) : null}
+                <span
+                  className={iconWrapClassName}
+                  style={{ backgroundColor: menu.isActive ? sidebarColors.iconActiveBackground : sidebarColors.iconBackground }}
+                >
                   <Icon className="h-[18px] w-[18px] shrink-0" />
                 </span>
                 {!collapsed ? (
@@ -459,7 +499,10 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
               </button>
 
               {!collapsed && isOpen ? (
-                <div className="ml-[18px] grid gap-[6px] border-l border-[#d8ece3] pl-4">
+                <div
+                  className="ml-[18px] grid gap-[6px] border-l pl-4"
+                  style={{ borderColor: sidebarColors.submenuBorder }}
+                >
                   {menu.children.map((child) => {
                     const ChildIcon = iconMap[child.menu_key] || DefaultIcon;
                     const childLabel = getSidebarLabel(child);
@@ -468,16 +511,22 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
                       <NavLink
                         key={child.menu_id}
                         to={child.resolvedPath || "#"}
-                        className={`flex min-h-11 items-center gap-[10px] rounded-xl px-3 no-underline font-semibold transition-all duration-200 ${
-                          child.isActive
-                            ? "translate-x-[2px] bg-brand-500/10 text-brand-500"
-                            : "bg-transparent text-text-muted hover:text-text-strong"
-                        }`}
+                        className="flex min-h-11 items-center gap-[10px] rounded-xl px-3 no-underline font-semibold transition-all duration-200"
                         onClick={child.resolvedPath ? onNavigate : undefined}
+                        style={{
+                          transform: child.isActive ? "translateX(2px)" : undefined,
+                          backgroundColor: child.isActive
+                            ? sidebarColors.submenuActiveBackground
+                            : THEME_COLORS.common.transparent,
+                          color: child.isActive ? THEME_COLORS.brand.primary : sidebarColors.submenuInactiveText,
+                        }}
                       >
-                        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-[8px] ${
-                          child.isActive ? "bg-[#34d399]/20" : "bg-white/5"
-                        }`}>
+                        <span
+                          className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px]"
+                          style={{
+                            backgroundColor: child.isActive ? "rgba(2, 156, 88, 0.15)" : sidebarColors.iconBackground,
+                          }}
+                        >
                           <ChildIcon className="h-4 w-4 shrink-0" />
                         </span>
                         <span>{childLabel}</span>
@@ -491,16 +540,27 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
         })}
       </nav>
 
-      <div className={`border-t border-white/5 pt-4 ${collapsed ? "grid justify-items-center" : "grid gap-3"}`}>
+      <div
+        className={`border-t pt-4 ${collapsed ? "grid justify-items-center" : "grid gap-3"}`}
+        style={{ borderColor: sidebarColors.sectionBorder, backgroundColor: sidebarColors.footerBackground }}
+      >
         <button
           type="button"
-          className={`flex items-center gap-3 rounded-2xl border border-red-500/10 bg-red-500/5 font-bold text-red-400 transition-all duration-200 hover:-translate-y-px hover:bg-red-500/10 ${
+          className={`flex items-center gap-3 rounded-2xl border font-bold transition-all duration-200 hover:-translate-y-px ${
             collapsed ? "h-14 w-14 justify-center px-0" : "min-h-[52px] w-full justify-start px-[14px]"
           }`}
           onClick={onLogout}
           title={collapsed ? en.sidebar.actions.logout : undefined}
+          style={{
+            borderColor: sidebarColors.logoutBorder,
+            backgroundColor: sidebarColors.logoutBackground,
+            color: sidebarColors.logoutText,
+          }}
         >
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-white/5 text-red-500">
+          <span
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px]"
+            style={{ backgroundColor: "rgba(194,65,53,0.12)", color: sidebarColors.logoutText }}
+          >
             <LogoutIcon className="h-[18px] w-[18px] shrink-0" />
           </span>
           {!collapsed ? <span>{en.sidebar.actions.logout}</span> : null}
