@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ITEM_LIST } from "../../Utils/Constant";
-import fetchWithRefreshToken from "../../Utils/fetchWithRefreshToken";
 import { Button, Card, InputField, PageSection } from "../ui";
 
 const getInitialFormState = (selectedAddon) => ({
-  item_id: selectedAddon?.item_id ? String(selectedAddon.item_id) : "",
   addon_group: selectedAddon?.addon_group || "",
+  min_select:
+    selectedAddon?.min_select != null ? String(selectedAddon.min_select) : "0",
+  max_select:
+    selectedAddon?.max_select != null ? String(selectedAddon.max_select) : "99",
   addon_name: selectedAddon?.addon_name || "",
   addon_price:
     selectedAddon?.addon_price != null ? String(selectedAddon.addon_price) : "",
@@ -22,37 +23,11 @@ function AddonForm({ selectedAddon, onSubmit, isSubmitting }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState(getInitialFormState(selectedAddon));
   const [errors, setErrors] = useState({});
-  const [items, setItems] = useState([]);
 
   useEffect(() => {
     setFormData(getInitialFormState(selectedAddon));
     setErrors({});
   }, [selectedAddon]);
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const response = await fetchWithRefreshToken(ITEM_LIST, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ page: 1, limit: 500 }),
-        });
-        const data = await response.json();
-
-        if (!response.ok || data.success === false) {
-          throw new Error(data.message || "Failed to fetch items");
-        }
-
-        setItems(data.data || []);
-      } catch (_error) {
-        setItems([]);
-      }
-    };
-
-    fetchItems();
-  }, []);
 
   const setFieldValue = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -62,12 +37,31 @@ function AddonForm({ selectedAddon, onSubmit, isSubmitting }) {
   const validateForm = () => {
     const nextErrors = {};
 
-    if (!formData.item_id) {
-      nextErrors.item_id = "Item is required";
-    }
-
     if (!formData.addon_group.trim()) {
       nextErrors.addon_group = "Add-on group is required";
+    }
+
+    const minSelect = Number(formData.min_select);
+    const maxSelect = Number(formData.max_select);
+
+    if (
+      formData.min_select === "" ||
+      Number.isNaN(minSelect) ||
+      minSelect < 0
+    ) {
+      nextErrors.min_select = "Minimum selections must be 0 or more";
+    }
+
+    if (
+      formData.max_select === "" ||
+      Number.isNaN(maxSelect) ||
+      maxSelect < 1
+    ) {
+      nextErrors.max_select = "Maximum selections must be at least 1";
+    }
+
+    if (!nextErrors.min_select && !nextErrors.max_select && minSelect > maxSelect) {
+      nextErrors.max_select = "Maximum must be greater than or equal to minimum";
     }
 
     if (!formData.addon_name.trim()) {
@@ -101,8 +95,9 @@ function AddonForm({ selectedAddon, onSubmit, isSubmitting }) {
 
     onSubmit?.({
       id: selectedAddon?.id,
-      item_id: Number(formData.item_id),
       addon_group: formData.addon_group.trim(),
+      min_select: parseInt(formData.min_select, 10),
+      max_select: parseInt(formData.max_select, 10),
       addon_name: formData.addon_name.trim(),
       addon_price:
         formData.addon_price !== "" ? parseFloat(formData.addon_price) : 0,
@@ -117,7 +112,7 @@ function AddonForm({ selectedAddon, onSubmit, isSubmitting }) {
       <Card>
         <PageSection
           eyebrow="Addon"
-          title={selectedAddon ? "Edit Addon" : "Create Addon"}
+          title={selectedAddon ? "Edit Addon Master" : "Create Addon Master"}
           actions={
             <Button variant="secondary" onClick={() => navigate("/addon")}>
               Back
@@ -127,21 +122,6 @@ function AddonForm({ selectedAddon, onSubmit, isSubmitting }) {
 
         <form onSubmit={handleSubmit} className="mt-5 grid max-w-[760px] gap-[18px]">
           <InputField
-            label="Item"
-            as="select"
-            value={formData.item_id}
-            onChange={(event) => setFieldValue("item_id", event.target.value)}
-            error={errors.item_id}
-          >
-            <option value="">Select item</option>
-            {items.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.item_name}
-              </option>
-            ))}
-          </InputField>
-
-          <InputField
             label="Add-on Group"
             type="text"
             value={formData.addon_group}
@@ -149,6 +129,30 @@ function AddonForm({ selectedAddon, onSubmit, isSubmitting }) {
             placeholder="e.g. Add Sides?"
             error={errors.addon_group}
           />
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            <InputField
+              label="Minimum Select"
+              type="number"
+              step="1"
+              min="0"
+              value={formData.min_select}
+              onChange={(event) => setFieldValue("min_select", event.target.value)}
+              placeholder="e.g. 0"
+              error={errors.min_select}
+            />
+
+            <InputField
+              label="Maximum Select"
+              type="number"
+              step="1"
+              min="1"
+              value={formData.max_select}
+              onChange={(event) => setFieldValue("max_select", event.target.value)}
+              placeholder="e.g. 5"
+              error={errors.max_select}
+            />
+          </div>
 
           <InputField
             label="Add-on Name"

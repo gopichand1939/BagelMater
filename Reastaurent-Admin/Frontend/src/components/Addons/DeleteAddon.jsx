@@ -86,8 +86,6 @@ function DeleteAddon() {
 
   const displayData = {
     id: addon.id,
-    item_id: addon.item_id,
-    item_name: addon.item_name || "-",
     addon_group: addon.addon_group || "-",
     addon_name: addon.addon_name || "-",
     addon_price: addon.addon_price != null ? `£${Number(addon.addon_price).toFixed(2)}` : "£0.00",
@@ -101,8 +99,8 @@ function DeleteAddon() {
     <div className="ui-page">
       <PageSection
         eyebrow="Addon"
-        title="Delete Addon"
-        subtitle="Use the centralized danger action below if you want to remove this addon."
+        title="Delete Addon Master"
+        subtitle="Use the centralized danger action below if you want to remove this addon master option."
         actions={<Button variant="secondary" onClick={() => navigate("/addon")}>Back</Button>}
       />
 

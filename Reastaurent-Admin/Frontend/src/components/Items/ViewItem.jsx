@@ -69,7 +69,7 @@ function ViewItem() {
     preparation_time: item.preparation_time != null ? `${item.preparation_time} min` : "Not set",
     is_popular: Number(item.is_popular) === 1 ? "Popular" : "Not Popular",
     is_new: Number(item.is_new) === 1 ? "NEW" : "No",
-    food_type: Number(item.is_veg) === 1 ? "Vegan" : "Halal",
+    food_type: Number(item.is_veg) === 1 ? "Veg" : Number(item.is_veg) === 2 ? "Both / N/A" : "Non-Veg",
     is_active: Number(item.is_active) === 1 ? "Active" : "Inactive",
     created_at: new Date(item.created_at).toLocaleString(),
     updated_at: new Date(item.updated_at).toLocaleString(),

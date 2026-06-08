@@ -11,7 +11,6 @@ import {
   fetchItemsByCategory,
 } from "../../services/menuApi";
 import {
-  applyAddonChange,
   applyCategoryChange,
   applyItemChange,
 } from "../../realtime/applyMenuChange";
@@ -293,15 +292,37 @@ function Home() {
     }
 
     if (payload.entity === "addon") {
-      const nextAddonState = applyAddonChange({
-        addonCache: addonCacheRef.current,
-        selectedItem: selectedItemRef.current,
-        selectedItemAddons: selectedItemAddonsRef.current,
-        change: payload,
+      const affectedItemIds = [
+        payload.itemId,
+        payload.previousItemId,
+        payload.entityData?.item_id,
+      ]
+        .filter(Boolean)
+        .map((itemId) => Number(itemId));
+      const isMasterAddonChange = affectedItemIds.length === 0;
+
+      setAddonCache((prev) => {
+        if (isMasterAddonChange) {
+          return {};
+        }
+
+        const next = { ...prev };
+        affectedItemIds.forEach((itemId) => {
+          delete next[itemId];
+        });
+        return next;
       });
 
-      setAddonCache(nextAddonState.addonCache);
-      setSelectedItemAddons(nextAddonState.selectedItemAddons);
+      if (
+        selectedItemRef.current &&
+        (isMasterAddonChange ||
+          affectedItemIds.includes(Number(selectedItemRef.current.id)))
+      ) {
+        void loadAddonsForItem(selectedItemRef.current, {
+          useCache: false,
+          openModal: addonModalOpen,
+        });
+      }
     }
   });
 
@@ -581,12 +602,24 @@ function Home() {
     }
   };
 
-  const addToCart = (item) => {
+  const addToCart = async (item) => {
     if (item.cart_key) {
       addConfiguredItemToCart(item, item.selected_addons || []);
       return;
     }
 
+    setSelectedItem(item);
+    const addons = await loadAddonsForItem(item, {
+      useCache: true,
+      openModal: false,
+    });
+
+    if (addons.length > 0) {
+      setAddonModalOpen(true);
+      return;
+    }
+
+    closeAddonModal();
     addConfiguredItemToCart(item, []);
   };
 

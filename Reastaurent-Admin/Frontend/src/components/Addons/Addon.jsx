@@ -75,8 +75,9 @@ function Addon() {
 
   const headers = [
     { key: "id", label: "Id", width: "45px" },
-    { key: "item_name", label: "Item Name", width: "140px" },
     { key: "addon_group", label: "Group", width: "120px" },
+    { key: "min_select", label: "Min", width: "60px" },
+    { key: "max_select", label: "Max", width: "60px" },
     { key: "addon_name", label: "Addon Name", width: "140px" },
     {
       key: "addon_price",
@@ -114,10 +115,10 @@ function Addon() {
       <div className="px-6 pt-3 pb-1">
         <PageSection
           eyebrow="Management"
-          title="Addon"
+          title="Addon Master"
           actions={
             <Button onClick={() => navigate("/addaddon")}>
-              Add Addon
+              Add Addon Master
             </Button>
           }
         />

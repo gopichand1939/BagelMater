@@ -3,33 +3,40 @@ const { publishMenuChangeSafely } = require("../realtime/menuEvents");
 
 const createAddon = async (req, res) => {
   try {
-    const { item_id, addon_group, addon_name, addon_price, sort_order, is_active } = req.body;
+    const { addon_group, min_select, max_select, addon_name, addon_price, sort_order, is_active } = req.body;
 
-    if (!item_id || !addon_group || !String(addon_group).trim() || !addon_name || !String(addon_name).trim()) {
+    if (!addon_group || !String(addon_group).trim() || !addon_name || !String(addon_name).trim()) {
       return res.status(400).json({
         success: false,
-        message: "item_id, addon_group and addon_name are required",
+        message: "addon_group and addon_name are required",
       });
     }
 
-    const normalizedItemId = parseInt(item_id, 10);
     const normalizedGroup = String(addon_group).trim();
+    const normalizedMinSelect = min_select != null && min_select !== "" ? parseInt(min_select, 10) : 0;
+    const normalizedMaxSelect = max_select != null && max_select !== "" ? parseInt(max_select, 10) : 99;
     const normalizedName = String(addon_name).trim();
     const normalizedPrice = addon_price != null && addon_price !== "" ? parseFloat(addon_price) : 0.0;
     const normalizedSortOrder = sort_order != null && sort_order !== "" ? parseInt(sort_order, 10) : 0;
     const normalizedActive = Number(is_active) === 0 ? 0 : 1;
 
-    if (Number.isNaN(normalizedItemId) || normalizedItemId < 1) {
-      return res.status(400).json({
-        success: false,
-        message: "item_id must be a valid positive number",
-      });
-    }
-
     if (Number.isNaN(normalizedPrice) || normalizedPrice < 0) {
       return res.status(400).json({
         success: false,
         message: "addon_price must be a valid positive number",
+      });
+    }
+
+    if (
+      Number.isNaN(normalizedMinSelect) ||
+      Number.isNaN(normalizedMaxSelect) ||
+      normalizedMinSelect < 0 ||
+      normalizedMaxSelect < 1 ||
+      normalizedMinSelect > normalizedMaxSelect
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "min_select and max_select must be valid selection limits",
       });
     }
 
@@ -41,8 +48,9 @@ const createAddon = async (req, res) => {
     }
 
     const data = await addonModel.createAddon(
-      normalizedItemId,
       normalizedGroup,
+      normalizedMinSelect,
+      normalizedMaxSelect,
       normalizedName,
       normalizedPrice,
       normalizedSortOrder,
@@ -52,15 +60,21 @@ const createAddon = async (req, res) => {
     if (!data) {
       return res.status(409).json({
         success: false,
-        message: "Invalid item or add-on already exists in this group for this item",
+        message: "Add-on already exists in this master group",
       });
     }
+
+    await addonModel.syncAddonGroupLimits(
+      data.addon_group,
+      normalizedMinSelect,
+      normalizedMaxSelect
+    );
 
     await publishMenuChangeSafely({
       entity: "addon",
       action: "created",
       entityId: data.id,
-      itemId: data.item_id,
+      itemId: null,
       entityData: data,
     });
 
@@ -80,7 +94,7 @@ const createAddon = async (req, res) => {
 
 const getAddonList = async (req, res) => {
   try {
-    let { page = 1, limit = 10, item_id = null, addon_group = null } = req.body;
+    let { page = 1, limit = 10, addon_group = null } = req.body;
 
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
@@ -93,17 +107,9 @@ const getAddonList = async (req, res) => {
       limit = 10;
     }
 
-    const normalizedItemId = item_id != null && item_id !== "" ? parseInt(item_id, 10) : null;
-    if (normalizedItemId != null && (Number.isNaN(normalizedItemId) || normalizedItemId < 1)) {
-      return res.status(400).json({
-        success: false,
-        message: "item_id must be a valid positive number",
-      });
-    }
-
     const normalizedGroup = addon_group && String(addon_group).trim() ? String(addon_group).trim() : null;
     const offset = (page - 1) * limit;
-    const rows = await addonModel.getAddonList(limit, offset, normalizedItemId, normalizedGroup);
+    const rows = await addonModel.getAddonList(limit, offset, normalizedGroup);
     const totalRecords = rows.length > 0 ? Number(rows[0].total_records) : 0;
     const data = rows.map(({ total_records, ...item }) => item);
     const totalPages = totalRecords === 0 ? 0 : Math.ceil(totalRecords / limit);
@@ -171,12 +177,12 @@ const getAddonById = async (req, res) => {
 
 const updateAddon = async (req, res) => {
   try {
-    const { id, item_id, addon_group, addon_name, addon_price, sort_order, is_active = 1 } = req.body;
+    const { id, addon_group, min_select, max_select, addon_name, addon_price, sort_order, is_active = 1 } = req.body;
 
-    if (!id || !item_id || !addon_group || !String(addon_group).trim() || !addon_name || !String(addon_name).trim()) {
+    if (!id || !addon_group || !String(addon_group).trim() || !addon_name || !String(addon_name).trim()) {
       return res.status(400).json({
         success: false,
-        message: "id, item_id, addon_group and addon_name are required",
+        message: "id, addon_group and addon_name are required",
       });
     }
 
@@ -189,8 +195,9 @@ const updateAddon = async (req, res) => {
     }
 
     const normalizedId = parseInt(id, 10);
-    const normalizedItemId = parseInt(item_id, 10);
     const normalizedGroup = String(addon_group).trim();
+    const normalizedMinSelect = min_select != null && min_select !== "" ? parseInt(min_select, 10) : 0;
+    const normalizedMaxSelect = max_select != null && max_select !== "" ? parseInt(max_select, 10) : 99;
     const normalizedName = String(addon_name).trim();
     const normalizedPrice = addon_price != null && addon_price !== "" ? parseFloat(addon_price) : 0.0;
     const normalizedSortOrder = sort_order != null && sort_order !== "" ? parseInt(sort_order, 10) : 0;
@@ -203,17 +210,23 @@ const updateAddon = async (req, res) => {
       });
     }
 
-    if (Number.isNaN(normalizedItemId) || normalizedItemId < 1) {
-      return res.status(400).json({
-        success: false,
-        message: "item_id must be a valid positive number",
-      });
-    }
-
     if (Number.isNaN(normalizedPrice) || normalizedPrice < 0) {
       return res.status(400).json({
         success: false,
         message: "addon_price must be a valid positive number",
+      });
+    }
+
+    if (
+      Number.isNaN(normalizedMinSelect) ||
+      Number.isNaN(normalizedMaxSelect) ||
+      normalizedMinSelect < 0 ||
+      normalizedMaxSelect < 1 ||
+      normalizedMinSelect > normalizedMaxSelect
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "min_select and max_select must be valid selection limits",
       });
     }
 
@@ -226,8 +239,9 @@ const updateAddon = async (req, res) => {
 
     const data = await addonModel.updateAddon(
       normalizedId,
-      normalizedItemId,
       normalizedGroup,
+      normalizedMinSelect,
+      normalizedMaxSelect,
       normalizedName,
       normalizedPrice,
       normalizedSortOrder,
@@ -244,7 +258,7 @@ const updateAddon = async (req, res) => {
     if (data?.duplicate_exists) {
       return res.status(409).json({
         success: false,
-        message: "Add-on already exists in this group for this item",
+        message: "Add-on already exists in this master group",
       });
     }
 
@@ -255,11 +269,17 @@ const updateAddon = async (req, res) => {
       ...updatedAddon
     } = data;
 
+    await addonModel.syncAddonGroupLimits(
+      updatedAddon.addon_group,
+      normalizedMinSelect,
+      normalizedMaxSelect
+    );
+
     await publishMenuChangeSafely({
       entity: "addon",
       action: "updated",
       entityId: updatedAddon.id,
-      itemId: updatedAddon.item_id,
+      itemId: null,
       previousItemId: existingAddon.item_id,
       entityData: updatedAddon,
     });
@@ -311,7 +331,7 @@ const deleteAddon = async (req, res) => {
       entity: "addon",
       action: "deleted",
       entityId: existingAddon.id,
-      itemId: existingAddon.item_id,
+      itemId: null,
       entityData: existingAddon,
     });
 
@@ -350,11 +370,18 @@ const getAddonsByItem = async (req, res) => {
     const rows = await addonModel.getAddonsByItem(normalizedItemId);
     const groupedMap = rows.reduce((acc, row) => {
       if (!acc[row.addon_group]) {
-        acc[row.addon_group] = [];
+        acc[row.addon_group] = {
+          addon_group: row.addon_group,
+          title: row.addon_group,
+          min_select: Number(row.min_select || 0),
+          max_select: Number(row.max_select || 99),
+          options: [],
+        };
       }
 
-      acc[row.addon_group].push({
+      acc[row.addon_group].options.push({
         id: row.id,
+        addonOptionId: row.id,
         addon_name: row.addon_name,
         addon_price: Number(row.addon_price || 0),
         sort_order: Number(row.sort_order || 0),
@@ -362,10 +389,7 @@ const getAddonsByItem = async (req, res) => {
       return acc;
     }, {});
 
-    const groupedData = Object.entries(groupedMap).map(([groupName, options]) => ({
-      addon_group: groupName,
-      options,
-    }));
+    const groupedData = Object.values(groupedMap);
 
     return res.status(200).json({
       success: true,

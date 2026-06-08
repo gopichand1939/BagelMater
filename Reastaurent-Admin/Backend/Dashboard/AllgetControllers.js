@@ -54,14 +54,14 @@ const getCategoryStats = async (req, res) => {
   }
 };
 
-// 3. Get Veg stats for Pie Chart (Veg vs Non-Veg items)
+// 3. Get Food type stats for Pie Chart
 const getVegStats = async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
         CASE 
           WHEN is_veg = 1 THEN 'Veg'
-          WHEN is_veg = 2 THEN 'Egg'
+          WHEN is_veg = 2 THEN 'Both / Not applicable'
           ELSE 'Non-Veg'
         END as type,
         COUNT(*)::INT as count

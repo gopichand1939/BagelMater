@@ -122,7 +122,9 @@ function CartDrawer({
         items: cart.map((item) => ({
           item_id: item.id,
           quantity: item.qty,
-          selected_addons: item.selected_addons || [],
+          addons: (item.selected_addons || []).map((addon) => ({
+            addonOptionId: addon.addonOptionId ?? addon.id,
+          })),
           item_notes: item.item_notes || "",
         })),
         delivery_address: {

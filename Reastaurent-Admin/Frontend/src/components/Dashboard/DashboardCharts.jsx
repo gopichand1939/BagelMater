@@ -25,9 +25,9 @@ const COLORS = [
 ];
 
 const DIET_COLORS = {
-  Vegan: "#10b981",
-  Egg: "#f59e0b",
-  Halal: "#f43f5e",
+  Veg: "#10b981",
+  "Non-Veg": "#f43f5e",
+  "Both / N/A": "#64748b",
 };
 
 const DashboardCharts = ({ categoryStats, vegStats, barChartData }) => {
@@ -35,9 +35,9 @@ const DashboardCharts = ({ categoryStats, vegStats, barChartData }) => {
     ...entry,
     type:
       entry.type === "Veg"
-        ? "Vegan"
-        : entry.type === "Non-Veg" || entry.type === "Non-veg"
-          ? "Halal"
+        ? "Veg"
+        : entry.type === "Both / Not applicable"
+          ? "Both / N/A"
           : entry.type,
   }));
 

@@ -6,6 +6,7 @@ const path = require("path");
 const categoryRoutes = require("./category/categoryRoutes");
 const itemRoutes = require("./items/itemRoutes");
 const addonRoutes = require("./addons/addonRoutes");
+const addonModel = require("./addons/addonModel");
 const adminRoutes = require("./Login/adminRoutes");
 const adminModel = require("./Login/adminModel");
 const menuAccessModel = require("./Access/menuAccessModel");
@@ -91,7 +92,9 @@ const PORT = Number(process.env.PORT) || 5000;
 const startServer = async () => {
   try {
     await adminModel.ensureAdminTable();
+    await addonModel.ensureAddonTable();
     await menuAccessModel.ensureAccessControlData();
+    await addonModel.ensureAddonAccessMenu();
     await restaurantSettingsModel.ensureRestaurantSettingsTable();
     await orderReportsModel.ensureOrderReportsAccessControlData();
     const adminUpdatesGateway = createAdminUpdatesGateway(server);

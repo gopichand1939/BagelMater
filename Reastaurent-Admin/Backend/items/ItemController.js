@@ -30,6 +30,11 @@ const toListItemResponse = (req, item) => {
   };
 };
 
+const normalizeFoodType = (value) => {
+  const numericValue = Number(value);
+  return [0, 1, 2].includes(numericValue) ? numericValue : 0;
+};
+
 const createItem = async (req, res) => {
   try {
     const { category_id, item_name, item_description, price, discount_price, preparation_time, is_popular, is_new, is_veg } = req.body;
@@ -51,7 +56,7 @@ const createItem = async (req, res) => {
     const normalizedPrepTime = preparation_time != null && preparation_time !== "" ? parseInt(preparation_time, 10) : null;
     const normalizedPopular = Number(is_popular) === 1 ? 1 : 0;
     const normalizedNew = Number(is_new) === 1 ? 1 : 0;
-    const normalizedVeg = Number(is_veg) === 1 ? 1 : 0;
+    const normalizedVeg = normalizeFoodType(is_veg);
 
     if (!normalizedImage) {
       return res.status(400).json({
@@ -219,7 +224,7 @@ const updateItem = async (req, res) => {
     const normalizedPrepTime = preparation_time != null && preparation_time !== "" ? parseInt(preparation_time, 10) : null;
     const normalizedPopular = Number(is_popular) === 1 ? 1 : 0;
     const normalizedNew = Number(is_new) === 1 ? 1 : 0;
-    const normalizedVeg = Number(is_veg) === 1 ? 1 : 0;
+    const normalizedVeg = normalizeFoodType(is_veg);
 
     const data = await itemModel.updateItem(
       id,

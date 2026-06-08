@@ -1,0 +1,6 @@
+ALTER TABLE customers
+ADD COLUMN IF NOT EXISTS current_session_id TEXT,
+ADD COLUMN IF NOT EXISTS session_expires_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS refresh_token_hash TEXT,
+ADD COLUMN IF NOT EXISTS refresh_token_expires_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;

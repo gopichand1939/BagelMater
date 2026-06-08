@@ -52,7 +52,7 @@ const blankItemForm = (categoryId = "") => ({
   preparation_time: "",
   is_popular: false,
   is_new: false,
-  is_veg: true,
+  is_veg: null,
   is_active: true,
   image_file: null,
   image_label: "No image selected",
@@ -77,6 +77,32 @@ const placeholder = (label, tone = "eaf8f2") =>
 const toFormBool = (value, fallback = true) =>
   typeof value === "undefined" || value === null ? fallback : Number(value) === 1;
 
+const foodTypeOptions = [
+  { label: "Veg", value: 1, activeClassName: "border-emerald-500 bg-emerald-50 text-emerald-700" },
+  { label: "Non-Veg", value: 0, activeClassName: "border-red-500 bg-red-50 text-red-600" },
+  { label: "Both / N/A", value: 2, activeClassName: "border-slate-500 bg-slate-100 text-slate-800" },
+];
+
+const foodTypeLabel = (value) =>
+  foodTypeOptions.find((option) => option.value === Number(value))?.label || "Non-Veg";
+
+const foodTypeBadgeClassName = (value) => {
+  if (Number(value) === 1) {
+    return "bg-success-bg text-success-text";
+  }
+
+  if (Number(value) === 2) {
+    return "bg-slate-100 text-slate-700";
+  }
+
+  return "bg-error-bg text-error-text";
+};
+
+const toFoodTypeValue = (value) => {
+  const numericValue = Number(value);
+  return [0, 1, 2].includes(numericValue) ? numericValue : null;
+};
+
 const buildCategoryForm = (category) => ({
   category_name: category?.category_name || "",
   category_description: category?.category_description || "",
@@ -96,7 +122,7 @@ const buildItemForm = (item) => ({
   preparation_time: item?.preparation_time != null ? String(item.preparation_time) : "",
   is_popular: toFormBool(item?.is_popular, false),
   is_new: toFormBool(item?.is_new, false),
-  is_veg: toFormBool(item?.is_veg),
+  is_veg: toFoodTypeValue(item?.is_veg),
   is_active: toFormBool(item?.is_active),
   image_file: null,
   image_label: getImageUrl(item, "item_image") ? "Current image selected" : "No image selected",
@@ -143,6 +169,33 @@ function FieldToggle({ label, active, activeText, inactiveText, onClick }) {
           {active ? activeText : inactiveText}
         </span>
       </button>
+    </div>
+  );
+}
+
+function FoodTypeChoice({ value, onChange }) {
+  return (
+    <div className="ui-field-shell">
+      <span className="ui-label">Food type</span>
+      <div className="inline-flex w-fit flex-wrap rounded-full border border-slate-200 bg-white p-1 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+        {foodTypeOptions.map((option) => {
+          const isSelected = value === option.value;
+
+          return (
+            <button
+              key={option.label}
+              type="button"
+              aria-pressed={isSelected}
+              className={`rounded-full px-4 py-2 text-[0.9rem] font-extrabold transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 ${
+                isSelected ? option.activeClassName : "border-transparent text-slate-500 hover:bg-slate-50"
+              }`}
+              onClick={() => onChange(option.value)}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -530,6 +583,11 @@ function MenuCatalogBuilder() {
       return;
     }
 
+    if (itemForm.is_veg === null) {
+      toast.error("Please select Veg, Non-Veg, or Both / N/A food type");
+      return;
+    }
+
     const isEdit = itemMode?.type === "edit";
     const formData = new FormData();
 
@@ -544,7 +602,7 @@ function MenuCatalogBuilder() {
     formData.append("price", itemForm.price === "" ? 0 : itemForm.price);
     formData.append("is_popular", itemForm.is_popular ? 1 : 0);
     formData.append("is_new", itemForm.is_new ? 1 : 0);
-    formData.append("is_veg", itemForm.is_veg ? 1 : 0);
+    formData.append("is_veg", itemForm.is_veg);
 
     if (itemForm.discount_price !== "") {
       formData.append("discount_price", itemForm.discount_price);
@@ -622,7 +680,7 @@ function MenuCatalogBuilder() {
     formData.append("price", item.price != null ? item.price : 0);
     formData.append("is_popular", Number(item.is_popular) === 1 ? 1 : 0);
     formData.append("is_new", Number(item.is_new) === 1 ? 1 : 0);
-    formData.append("is_veg", Number(item.is_veg) === 1 ? 1 : 0);
+    formData.append("is_veg", toFoodTypeValue(item.is_veg) ?? 0);
 
     if (item.discount_price != null) {
       formData.append("discount_price", item.discount_price);
@@ -1019,12 +1077,9 @@ function MenuCatalogBuilder() {
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <FieldToggle
-                  label="Food type"
-                  active={itemForm.is_veg}
-                  activeText="Vegan"
-                  inactiveText="Halal"
-                  onClick={() => setItemField("is_veg", !itemForm.is_veg)}
+                <FoodTypeChoice
+                  value={itemForm.is_veg}
+                  onChange={(value) => setItemField("is_veg", value)}
                 />
                 <FieldToggle
                   label="Popular"
@@ -1448,12 +1503,8 @@ function MenuCatalogBuilder() {
                                       <h5 className="m-0 text-[1.05rem] font-extrabold text-text-strong">
                                         {item.item_name}
                                       </h5>
-                                      <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-extrabold uppercase ${
-                                        Number(item.is_veg) === 1
-                                          ? "bg-success-bg text-success-text"
-                                          : "bg-error-bg text-error-text"
-                                      }`}>
-                                        {Number(item.is_veg) === 1 ? "Vegan" : "Halal"}
+                                      <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-extrabold uppercase ${foodTypeBadgeClassName(item.is_veg)}`}>
+                                        {foodTypeLabel(item.is_veg)}
                                       </span>
                                       {Number(item.is_popular) === 1 ? (
                                         <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[0.72rem] font-extrabold uppercase text-amber-600">

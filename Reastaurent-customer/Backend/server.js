@@ -84,10 +84,17 @@ app.get("/health", async (_req, res) => {
 
 const PORT = Number(process.env.PORT) || 15014;
 
+const ensureAddonCompatibilityColumns = async () => {
+  await db.query(`ALTER TABLE IF EXISTS item_addons ALTER COLUMN item_id DROP NOT NULL;`);
+  await db.query(`ALTER TABLE IF EXISTS item_addons ADD COLUMN IF NOT EXISTS min_select INT DEFAULT 0;`);
+  await db.query(`ALTER TABLE IF EXISTS item_addons ADD COLUMN IF NOT EXISTS max_select INT DEFAULT 99;`);
+};
+
 const startServer = async () => {
   try {
     console.log("Warming up database connection...");
     await db.warmUp();
+    await ensureAddonCompatibilityColumns();
 
     startMenuChangeSubscriber({
       onMenuChange: (change) => {

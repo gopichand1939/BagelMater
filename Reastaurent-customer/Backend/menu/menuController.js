@@ -143,7 +143,7 @@ const getItemsByCategory = async (req, res) => {
 
 const getItemAddons = async (req, res) => {
   try {
-    const { item_id, page = 1, limit = 10 } = req.body;
+    const { item_id } = req.body;
 
     if (!item_id) {
       return res.status(400).json({
@@ -152,10 +152,7 @@ const getItemAddons = async (req, res) => {
       });
     }
 
-    const pageNumber = Number(page) || 1;
-    const limitNumber = Number(limit) || 10;
-    const offset = (pageNumber - 1) * limitNumber;
-    const cacheKey = `${item_id}_${pageNumber}_${limitNumber}`;
+    const cacheKey = `${item_id}_master_all`;
 
     if (isCacheValid(cache.addons[cacheKey])) {
       return res.status(200).json({
@@ -168,8 +165,9 @@ const getItemAddons = async (req, res) => {
       SELECT
         ia.id,
         ia.item_id,
-        i.item_name,
         ia.addon_group,
+        ia.min_select,
+        ia.max_select,
         ia.addon_name,
         ia.addon_price,
         ia.sort_order,
@@ -178,40 +176,45 @@ const getItemAddons = async (req, res) => {
         ia.is_deleted,
         ia.is_active
       FROM item_addons ia
-      INNER JOIN items i ON i.id = ia.item_id
-      WHERE ia.item_id = $1
+      WHERE ia.item_id IS NULL
         AND ia.is_deleted = 0
         AND ia.is_active = 1
-        AND i.is_deleted = 0
-      ORDER BY ia.sort_order ASC, ia.id DESC
-      LIMIT $2 OFFSET $3
+      ORDER BY ia.addon_group ASC, ia.sort_order ASC, ia.id ASC
     `;
+    const addonsResult = await db.query(addonsQuery);
+    const totalRecords = addonsResult.rowCount || 0;
 
-    const countQuery = `
-      SELECT COUNT(*) AS total
-      FROM item_addons
-      WHERE item_id = $1
-        AND is_deleted = 0
-        AND is_active = 1
-    `;
+    const groupedMap = addonsResult.rows.reduce((acc, addon) => {
+      if (!acc[addon.addon_group]) {
+        acc[addon.addon_group] = {
+          addon_group: addon.addon_group,
+          title: addon.addon_group,
+          min_select: Number(addon.min_select || 0),
+          max_select: Number(addon.max_select || 99),
+          options: [],
+        };
+      }
 
-    const [addonsResult, countResult] = await Promise.all([
-      db.query(addonsQuery, [item_id, limitNumber, offset]),
-      db.query(countQuery, [item_id]),
-    ]);
+      acc[addon.addon_group].options.push({
+        id: addon.id,
+        addonOptionId: addon.id,
+        addon_name: addon.addon_name,
+        addon_price: Number(addon.addon_price || 0),
+        sort_order: Number(addon.sort_order || 0),
+      });
 
-    const totalRecords = parseInt(countResult.rows[0].total, 10) || 0;
-    const totalPages = totalRecords === 0 ? 0 : Math.ceil(totalRecords / limitNumber);
+      return acc;
+    }, {});
 
     const responseData = {
       success: true,
       message: "Add-on list fetched successfully",
-      data: addonsResult.rows,
+      data: Object.values(groupedMap),
       pagination: {
         totalRecords,
-        totalPages,
-        currentPage: pageNumber,
-        limit: limitNumber,
+        totalPages: totalRecords > 0 ? 1 : 0,
+        currentPage: 1,
+        limit: totalRecords,
       },
     };
 

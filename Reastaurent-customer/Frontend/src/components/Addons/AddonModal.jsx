@@ -8,14 +8,14 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
     setSelectedAddons([]);
   }, [item?.id]);
 
-  const groupedAddons = useMemo(() => {
-    return addons.reduce((groups, addon) => {
-      if (!groups[addon.addon_group]) {
-        groups[addon.addon_group] = [];
-      }
-      groups[addon.addon_group].push(addon);
-      return groups;
-    }, {});
+  const addonGroups = useMemo(() => {
+    return addons.map((group) => ({
+      addon_group: group.addon_group || group.title || "Add-ons",
+      title: group.title || group.addon_group || "Add-ons",
+      min_select: Number(group.min_select || 0),
+      max_select: Number(group.max_select || 99),
+      options: Array.isArray(group.options) ? group.options : [],
+    }));
   }, [addons]);
 
   const basePrice =
@@ -30,15 +30,38 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
 
   const totalPrice = (basePrice + addonTotal).toFixed(2);
 
-  const toggleAddon = (addon) => {
+  const toggleAddon = (addon, group) => {
     setSelectedAddons((prev) => {
       const exists = prev.some((selected) => selected.id === addon.id);
       if (exists) {
         return prev.filter((selected) => selected.id !== addon.id);
       }
-      return [...prev, addon];
+
+      const selectedInGroup = prev.filter(
+        (selected) => selected.addon_group === group.addon_group
+      ).length;
+
+      if (selectedInGroup >= group.max_select) {
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          ...addon,
+          addonOptionId: addon.addonOptionId ?? addon.id,
+          addon_group: group.addon_group,
+        },
+      ];
     });
   };
+
+  const canConfirm = addonGroups.every((group) => {
+    const selectedInGroup = selectedAddons.filter(
+      (addon) => addon.addon_group === group.addon_group
+    ).length;
+    return selectedInGroup >= group.min_select && selectedInGroup <= group.max_select;
+  });
 
   return (
     <>
@@ -82,22 +105,27 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
             <div className="py-8 text-center text-[15px] text-white/55">
               Loading add-ons...
             </div>
-          ) : addons.length === 0 ? (
+          ) : addonGroups.length === 0 ? (
             <div className="py-5 text-center text-[15px] text-white/55">
               No add-ons available for this item.
             </div>
           ) : (
-            Object.entries(groupedAddons).map(([groupName, groupAddons]) => (
+            addonGroups.map((group) => (
               <div
-                key={groupName}
+                key={group.addon_group}
                 className="rounded-[18px] border border-white/10 bg-white/[0.04] p-4"
               >
-                <h3 className="m-0 text-base font-bold text-white">
-                  {groupName}
-                </h3>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="m-0 text-base font-bold text-white">
+                    {group.title}
+                  </h3>
+                  <span className="text-xs font-bold text-white/45">
+                    Max {group.max_select}
+                  </span>
+                </div>
 
                 <div className="mt-[14px] flex flex-col gap-2.5">
-                  {groupAddons.map((addon) => {
+                  {group.options.map((addon) => {
                     const isSelected = selectedAddons.some(
                       (selected) => selected.id === addon.id
                     );
@@ -105,7 +133,7 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
                     return (
                       <button
                         key={addon.id}
-                        onClick={() => toggleAddon(addon)}
+                        onClick={() => toggleAddon(addon, group)}
                         className={`flex items-center justify-between rounded-[14px] px-4 py-[14px] text-left transition ${
                           isSelected
                             ? "border border-amber-400/60 bg-gradient-to-br from-amber-500/20 to-red-500/20"
@@ -145,7 +173,8 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
 
           <button
             onClick={() => onConfirm(selectedAddons)}
-            className="rounded-2xl border-0 bg-gradient-to-br from-amber-500 to-red-500 px-[22px] py-[14px] text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(245,158,11,0.24)] transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
+            disabled={!canConfirm}
+            className="rounded-2xl border-0 bg-gradient-to-br from-amber-500 to-red-500 px-[22px] py-[14px] text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(245,158,11,0.24)] transition-all duration-200 hover:scale-[1.01] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-55"
           >
             Add Item
           </button>

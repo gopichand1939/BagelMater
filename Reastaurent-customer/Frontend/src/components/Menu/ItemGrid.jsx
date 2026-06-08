@@ -1,6 +1,30 @@
 import { useState } from "react";
 import { getImageUrl } from "../../Utils/imageUrl";
 
+const getFoodTypeMarker = (value) => {
+  if (Number(value) === 1) {
+    return {
+      borderClassName: "border-green-500",
+      dotClassName: "bg-green-500",
+      label: "Veg",
+    };
+  }
+
+  if (Number(value) === 2) {
+    return {
+      borderClassName: "border-slate-300",
+      dotClassName: "bg-slate-300",
+      label: "Both / N/A",
+    };
+  }
+
+  return {
+    borderClassName: "border-red-500",
+    dotClassName: "bg-red-500",
+    label: "Non-Veg",
+  };
+};
+
 function ItemCard({
   item,
   onAddToCart,
@@ -10,6 +34,7 @@ function ItemCard({
 }) {
   const [hovered, setHovered] = useState(false);
   const hasDiscount = item.discount_price && item.discount_price < item.price;
+  const foodTypeMarker = getFoodTypeMarker(item.is_veg);
 
   return (
     <div
@@ -62,14 +87,12 @@ function ItemCard({
 
         <div
           className={`absolute right-2.5 top-2.5 grid h-6 w-6 place-items-center rounded-md border-2 bg-black/60 backdrop-blur ${
-            item.is_veg === 1 ? "border-green-500" : "border-red-500"
+            foodTypeMarker.borderClassName
           }`}
+          title={foodTypeMarker.label}
+          aria-label={foodTypeMarker.label}
         >
-          <div
-            className={`h-2.5 w-2.5 rounded-full ${
-              item.is_veg === 1 ? "bg-green-500" : "bg-red-500"
-            }`}
-          />
+          <div className={`h-2.5 w-2.5 rounded-full ${foodTypeMarker.dotClassName}`} />
         </div>
       </button>
 

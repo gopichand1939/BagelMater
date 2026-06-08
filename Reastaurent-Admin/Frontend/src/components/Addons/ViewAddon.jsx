@@ -60,9 +60,9 @@ function ViewAddon() {
 
   const displayData = {
     id: addon.id,
-    item_id: addon.item_id,
-    item_name: addon.item_name || "-",
     addon_group: addon.addon_group || "-",
+    min_select: addon.min_select != null ? addon.min_select : 0,
+    max_select: addon.max_select != null ? addon.max_select : 99,
     addon_name: addon.addon_name || "-",
     addon_price: addon.addon_price != null ? `£${Number(addon.addon_price).toFixed(2)}` : "£0.00",
     sort_order: addon.sort_order != null ? addon.sort_order : 0,
@@ -76,7 +76,7 @@ function ViewAddon() {
       <div className="px-6 pt-3 pb-1">
         <PageSection
           eyebrow="Addon"
-          title="View Addon"
+          title="View Addon Master"
           actions={
             <Button variant="secondary" onClick={() => navigate("/addon")}>
               Back
