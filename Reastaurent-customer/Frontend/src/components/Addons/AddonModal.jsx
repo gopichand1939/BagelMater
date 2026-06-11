@@ -8,6 +8,12 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
     setSelectedAddons([]);
   }, [item?.id]);
 
+
+
+
+
+  // Transform addons into groups with options
+
   const addonGroups = useMemo(() => {
     return addons.map((group) => ({
       addon_group: group.addon_group || group.title || "Add-ons",
