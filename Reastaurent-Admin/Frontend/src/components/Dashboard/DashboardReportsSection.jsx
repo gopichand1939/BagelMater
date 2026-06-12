@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  LuDownload,
-  LuFileSpreadsheet,
-  LuFileText,
-  LuRefreshCw,
-  LuSearch,
-} from "react-icons/lu";
+import { LuRefreshCw, LuSearch } from "react-icons/lu";
 import {
   Bar,
   BarChart,
@@ -23,12 +17,7 @@ import {
 } from "recharts";
 import { Card } from "../ui";
 import fetchWithRefreshToken from "../../Utils/fetchWithRefreshToken";
-import {
-  ORDER_REPORTS_DASHBOARD,
-  ORDER_REPORTS_EXPORT_CSV,
-  ORDER_REPORTS_EXPORT_EXCEL,
-  ORDER_REPORTS_EXPORT_PDF,
-} from "../../Utils/Constant";
+import { ORDER_REPORTS_DASHBOARD } from "../../Utils/Constant";
 
 const paymentStatusOptions = ["", "paid", "pending", "failed", "refunded"];
 const orderStatusOptions = [
@@ -119,7 +108,7 @@ function StatTile({ label, value, tone = "emerald" }) {
   );
 }
 
-function OrderReports() {
+function DashboardReportsSection() {
   const [filters, setFilters] = useState({
     from_date: today(),
     to_date: today(),
@@ -174,22 +163,6 @@ function OrderReports() {
     }));
   };
 
-  const downloadReport = async (url, extension) => {
-    const response = await fetchWithRefreshToken(buildUrl(url, queryFilters));
-    const blob = await response.blob();
-
-    if (!response.ok) {
-      setError("Download failed");
-      return;
-    }
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `order-report-${filters.from_date}-to-${filters.to_date}.${extension}`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
   const summary = report?.summary || {};
   const orders = report?.orders || [];
   const payments = normalizePaymentAnalytics(report?.payments);
@@ -199,13 +172,13 @@ function OrderReports() {
   const statusAnalytics = Array.isArray(report?.statusAnalytics) ? report.statusAnalytics : [];
 
   return (
-    <div className="ui-page content-start">
+    <section className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="m-0 text-sm font-black uppercase tracking-[0.16em] text-brand-600">
             Reports
           </p>
-          <h1 className="m-0 text-3xl font-bold text-text-strong">Order Reports Dashboard</h1>
+          <h2 className="m-0 text-2xl font-bold text-text-strong">Reports Preview</h2>
         </div>
         <button
           type="button"
@@ -271,40 +244,14 @@ function OrderReports() {
           </label>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand-500 px-4 font-bold text-white"
-            onClick={loadReport}
-          >
-            <LuSearch size={18} />
-            Apply
-          </button>
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border-subtle bg-white px-4 font-bold text-text-strong"
-            onClick={() => downloadReport(ORDER_REPORTS_EXPORT_PDF, "pdf")}
-          >
-            <LuFileText size={18} />
-            Download PDF
-          </button>
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border-subtle bg-white px-4 font-bold text-text-strong"
-            onClick={() => downloadReport(ORDER_REPORTS_EXPORT_EXCEL, "xlsx")}
-          >
-            <LuFileSpreadsheet size={18} />
-            Download Excel
-          </button>
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border-subtle bg-white px-4 font-bold text-text-strong"
-            onClick={() => downloadReport(ORDER_REPORTS_EXPORT_CSV, "csv")}
-          >
-            <LuDownload size={18} />
-            Download CSV
-          </button>
-        </div>
+        <button
+          type="button"
+          className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-brand-500 px-4 font-bold text-white"
+          onClick={loadReport}
+        >
+          <LuSearch size={18} />
+          Apply
+        </button>
       </Card>
 
       {error ? (
@@ -326,7 +273,7 @@ function OrderReports() {
 
       <section className="grid gap-4 xl:grid-cols-2">
         <Card className="grid min-h-[360px] gap-4">
-          <h2 className="m-0 text-lg font-bold text-text-strong">Sales Chart</h2>
+          <h3 className="m-0 text-lg font-bold text-text-strong">Sales Chart</h3>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={dailySales}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -341,7 +288,7 @@ function OrderReports() {
         </Card>
 
         <Card className="grid min-h-[360px] gap-4">
-          <h2 className="m-0 text-lg font-bold text-text-strong">Hourly Sales Analytics</h2>
+          <h3 className="m-0 text-lg font-bold text-text-strong">Hourly Sales Analytics</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={hourlySales}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -354,7 +301,7 @@ function OrderReports() {
         </Card>
 
         <Card className="grid min-h-[360px] gap-4">
-          <h2 className="m-0 text-lg font-bold text-text-strong">Top Products</h2>
+          <h3 className="m-0 text-lg font-bold text-text-strong">Top Products</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={topProducts.slice(0, 8)} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -367,7 +314,7 @@ function OrderReports() {
         </Card>
 
         <Card className="grid min-h-[360px] gap-4">
-          <h2 className="m-0 text-lg font-bold text-text-strong">Payment Analytics</h2>
+          <h3 className="m-0 text-lg font-bold text-text-strong">Payment Analytics</h3>
           {payments?.length > 0 ? (
             <div className="grid min-h-[280px] gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(190px,0.85fr)]">
               <ResponsiveContainer width="100%" height={260}>
@@ -432,7 +379,7 @@ function OrderReports() {
 
       <Card className="grid gap-4 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="m-0 text-lg font-bold text-text-strong">Orders Table</h2>
+          <h3 className="m-0 text-lg font-bold text-text-strong">Orders Table</h3>
           <div className="text-sm font-semibold text-text-muted">
             Peak: {summary.peak_sales_hour || "-"} - Top Product: {summary.top_selling_product || "-"}
           </div>
@@ -477,7 +424,7 @@ function OrderReports() {
       </Card>
 
       <Card className="grid gap-4">
-        <h2 className="m-0 text-lg font-bold text-text-strong">Order Status Analytics</h2>
+        <h3 className="m-0 text-lg font-bold text-text-strong">Order Status Analytics</h3>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {statusAnalytics.map((status) => (
             <div key={status.order_status} className="rounded-lg border border-border-subtle p-4">
@@ -488,8 +435,8 @@ function OrderReports() {
           ))}
         </div>
       </Card>
-    </div>
+    </section>
   );
 }
 
-export default OrderReports;
+export default DashboardReportsSection;

@@ -16,6 +16,7 @@ import {
 
 // Lazy load the charts component (heavy)
 const DashboardCharts = lazy(() => import("./DashboardCharts"));
+const DashboardReportsSection = lazy(() => import("./DashboardReportsSection"));
 
 const accentClassMap = {
   success: "text-brand-600 bg-brand-500/15",
@@ -144,6 +145,20 @@ function Dashboard() {
             />
           </div>
         )}
+      </Suspense>
+
+      <Suspense fallback={
+        <div className="mt-[18px] grid gap-4">
+          <Card className="h-[160px] animate-pulse bg-surface-muted/30" />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card className="h-[360px] animate-pulse bg-surface-muted/30" />
+            <Card className="h-[360px] animate-pulse bg-surface-muted/30" />
+          </div>
+        </div>
+      }>
+        <div className="mt-[18px]">
+          <DashboardReportsSection />
+        </div>
       </Suspense>
     </div>
   );

@@ -261,6 +261,17 @@ function AddonEligibility() {
     }));
   };
 
+  const clearItemsInCategory = (categoryId) => {
+    const categoryItems = itemsByCategory[String(categoryId)] || [];
+    const categoryItemIds = categoryItems.map((item) => Number(item.item_id));
+
+    setFormData((prev) => ({
+      ...prev,
+      item_ids: prev.item_ids.filter((itemId) => !categoryItemIds.includes(itemId)),
+    }));
+    setErrors((prev) => ({ ...prev, item_ids: null }));
+  };
+
   const handleEdit = (row) => {
     const groupSelection = {
       ...createGroupSelection(row.group_id),
@@ -613,14 +624,36 @@ function AddonEligibility() {
                 {formData.category_ids.map((categoryId) => {
                   const category = lookups.categories.find((item) => Number(item.id) === Number(categoryId));
                   const categoryItems = itemsByCategory[String(categoryId)] || [];
+                  const categoryItemIds = categoryItems.map((item) => Number(item.item_id));
+                  const selectedCategoryItemCount = categoryItemIds.filter((itemId) =>
+                    formData.item_ids.includes(itemId)
+                  ).length;
+                  const allCategoryItemsSelected =
+                    categoryItemIds.length > 0 && selectedCategoryItemCount === categoryItemIds.length;
+                  const noCategoryItemsSelected = selectedCategoryItemCount === 0;
 
                   return (
                     <div key={categoryId} className="grid gap-3 rounded-[8px] border border-border-subtle bg-surface-muted/40 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <strong className="text-text-strong">{category?.category_name || "Category"}</strong>
-                        <Button type="button" variant="secondary" onClick={() => selectAllItemsInCategory(categoryId)} disabled={Boolean(selectedMapping)}>
-                          Select All Items
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => selectAllItemsInCategory(categoryId)}
+                            disabled={Boolean(selectedMapping) || allCategoryItemsSelected || !categoryItemIds.length}
+                          >
+                            Select All Items
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => clearItemsInCategory(categoryId)}
+                            disabled={Boolean(selectedMapping) || noCategoryItemsSelected}
+                          >
+                            Clear Items
+                          </Button>
+                        </div>
                       </div>
 
                       {categoryItems.length ? (

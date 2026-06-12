@@ -25,54 +25,110 @@ const COLORS = [
 ];
 
 const DIET_COLORS = {
-  Veg: "#10b981",
-  "Non-Veg": "#f43f5e",
-  "Not applicable": "#64748b",
+  Vegan: "#10b981",
+  Halal: "#f43f5e",
+  "Not Applicable": "#64748b",
 };
 
 const DashboardCharts = ({ categoryStats, vegStats, barChartData }) => {
+  const categoryTotal = categoryStats.reduce(
+    (total, entry) => total + Number(entry.item_count || 0),
+    0
+  );
+  const displayCategoryStats = [...categoryStats].sort(
+    (first, second) => Number(second.item_count || 0) - Number(first.item_count || 0)
+  );
   const displayVegStats = vegStats.map((entry) => ({
     ...entry,
     type:
       entry.type === "Veg"
-        ? "Veg"
-        : entry.type === "Not applicable"
-          ? "Not applicable"
-          : entry.type,
+        ? "Vegan"
+        : entry.type === "Non-Veg"
+          ? "Halal"
+          : entry.type === "Not applicable"
+            ? "Not Applicable"
+            : entry.type,
   }));
 
   return (
     <section className="grid gap-[18px] lg:grid-cols-2">
       <Card className="grid content-start gap-[20px]">
         <strong className="text-[1.1rem] text-text-strong">Category Distribution</strong>
-        <div className="h-[300px] w-full">
+        <div className="min-h-[300px] w-full">
           {categoryStats.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryStats}
-                  dataKey="item_count"
-                  nameKey="category_name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  labelLine={false}
-                >
-                  {categoryStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-surface-panel)",
-                    borderColor: "var(--color-border-subtle)",
-                    borderRadius: "12px",
-                    color: "var(--color-text-base)",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="grid min-h-[300px] items-center gap-5 xl:grid-cols-[minmax(220px,0.9fr)_minmax(240px,1.1fr)]">
+              <div className="relative h-[240px] min-w-0 sm:h-[270px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                    <Pie
+                      data={displayCategoryStats}
+                      dataKey="item_count"
+                      nameKey="category_name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="58%"
+                      outerRadius="78%"
+                      paddingAngle={2}
+                      stroke="var(--color-surface-panel)"
+                      strokeWidth={3}
+                    >
+                      {displayCategoryStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name) => [
+                        `${value} item${Number(value) === 1 ? "" : "s"}`,
+                        name,
+                      ]}
+                      contentStyle={{
+                        backgroundColor: "var(--color-surface-panel)",
+                        borderColor: "var(--color-border-subtle)",
+                        borderRadius: "12px",
+                        color: "var(--color-text-base)",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                  <div className="text-center">
+                    <span className="block text-[1.6rem] font-black leading-none text-text-strong">
+                      {categoryTotal}
+                    </span>
+                    <span className="mt-1 block text-[0.75rem] font-bold uppercase text-text-muted">
+                      Items
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid max-h-[270px] min-w-0 content-start gap-2 overflow-y-auto pr-1">
+                {displayCategoryStats.map((entry, index) => {
+                  const itemCount = Number(entry.item_count || 0);
+                  const percent = categoryTotal ? Math.round((itemCount / categoryTotal) * 100) : 0;
+                  const color = COLORS[index % COLORS.length];
+
+                  return (
+                    <div
+                      key={entry.category_name || index}
+                      className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-2 rounded-[8px] px-2 py-1.5"
+                    >
+                      <span
+                        className="h-3 w-3 rounded-[3px]"
+                        style={{ backgroundColor: color }}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 truncate text-[0.88rem] font-bold text-text-strong">
+                        {entry.category_name}
+                      </span>
+                      <span className="text-[0.82rem] font-black text-text-muted">
+                        {percent}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center text-text-muted">
               No data available
