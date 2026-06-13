@@ -32,6 +32,19 @@ const pagedResponse = (res, rows, page, limit, message) => {
 const normalizeStatus = (value, fallback = 1) =>
   typeof value === "undefined" ? fallback : Number(value) === 0 ? 0 : 1;
 
+const normalizeBoolean = (value, fallback = false) => {
+  if (typeof value === "undefined" || value === null || value === "") {
+    return fallback;
+  }
+
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(normalized);
+};
+
 const normalizeAddonItemIds = (value) => {
   const source = Array.isArray(value) ? value : [];
   return Array.from(
@@ -374,6 +387,7 @@ const bulkAssignEligibility = async (req, res) => {
     const summary = { created: 0, updated: 0, skipped: 0, groups: 0 };
     const publishedAssignments = [];
     const validatedAssignments = [];
+    const replaceExisting = normalizeBoolean(req.body.replace_existing, false);
 
     for (const assignment of assignments) {
       const groupId = toPositiveInt(assignment.group_id);
@@ -402,10 +416,12 @@ const bulkAssignEligibility = async (req, res) => {
       });
     }
 
-    await addonModel.removeEligibilityOutsideGroups(
-      normalizedItemIds,
-      validatedAssignments.map((assignment) => assignment.groupId)
-    );
+    if (replaceExisting) {
+      await addonModel.removeEligibilityOutsideGroups(
+        normalizedItemIds,
+        validatedAssignments.map((assignment) => assignment.groupId)
+      );
+    }
 
     for (const assignment of validatedAssignments) {
       const result = await addonModel.bulkAssignEligibility(
