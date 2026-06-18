@@ -27,7 +27,7 @@ const getFoodTypeMarker = (value) => {
   };
 };
 
-function ItemCard({
+export function ItemCard({
   item,
   onAddToCart,
   onOpenAddons,

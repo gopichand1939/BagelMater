@@ -67,6 +67,29 @@ function GuestView({ onAuthenticated }) {
     password: "",
     confirm_password: "",
   });
+  const [activePromo, setActivePromo] = useState(null);
+  const [checkedEmails, setCheckedEmails] = useState(new Set());
+
+  const handleEmailBlur = async () => {
+    const email = registerForm.email.trim();
+    if (!email || !email.includes("@") || !email.includes(".") || checkedEmails.has(email.toLowerCase())) {
+      return;
+    }
+
+    try {
+      const result = await checkSignupEligibility(email);
+      if (result && result.eligible) {
+        setActivePromo(result);
+      }
+      setCheckedEmails((prev) => {
+        const next = new Set(prev);
+        next.add(email.toLowerCase());
+        return next;
+      });
+    } catch (_error) {
+      // Fail silently to not impact signup flow
+    }
+  };
 
   const isLogin = mode === "login";
 
@@ -199,6 +222,7 @@ function GuestView({ onAuthenticated }) {
                     email: event.target.value,
                   }))
                 }
+                onBlur={handleEmailBlur}
                 placeholder="Email address"
                 className="customer-input"
                 required
@@ -256,6 +280,12 @@ function GuestView({ onAuthenticated }) {
           </button>
         </form>
       </div>
+      {activePromo && (
+        <NewUserSignupPromoModal
+          promo={activePromo}
+          onClose={() => setActivePromo(null)}
+        />
+      )}
     </div>
   );
 }

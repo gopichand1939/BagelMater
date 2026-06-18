@@ -11,6 +11,8 @@ const customerProfileRoutes = require("./customer/customerProfileRoutes");
 const customerOrderRoutes = require("./orders/orderRoutes");
 const customerNotificationRoutes = require("./notifications/notificationRoutes");
 const paymentRoutes = require("./payments/paymentRoutes");
+const newUserSignupRoute = require("./NewUserSignup/NewUserSignupRoute");
+const deliveryChargesRoute = require("./DeliveryCharges/DeliveryChargesRoute");
 const {
   createMenuUpdatesGateway,
 } = require("./realtime/menuUpdatesGateway");
@@ -63,6 +65,8 @@ app.use("/api/customer", customerProfileRoutes);
 app.use("/api/orders", customerOrderRoutes);
 app.use("/api/notifications", customerNotificationRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/new-user-signup", newUserSignupRoute);
+app.use("/api/delivery-charges", deliveryChargesRoute);
 
 app.get("/health", async (_req, res) => {
   try {

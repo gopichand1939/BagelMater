@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState, lazy, Suspense } from "react";
 import { Header } from "../../components/common";
-import { CategoryBar, ItemGrid } from "../../components/Menu";
+import { CategoryBar, ItemGrid, ItemCard } from "../../components/Menu";
 
 const CartDrawer = lazy(() => import("../../components/Cart/CartDrawer"));
 const AddonModal = lazy(() => import("../../components/Addons/AddonModal"));
@@ -9,6 +9,7 @@ import {
   fetchCategories,
   fetchItemAddons,
   fetchItemsByCategory,
+  fetchTopProducts,
 } from "../../services/menuApi";
 import {
   applyCategoryChange,
@@ -28,6 +29,7 @@ import {
 function Home() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [topProducts, setTopProducts] = useState([]);
   const [items, setItems] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -87,6 +89,16 @@ function Home() {
   useEffect(() => {
     selectedItemAddonsRef.current = selectedItemAddons;
   }, [selectedItemAddons]);
+
+  const loadTopProducts = useEffectEvent(async () => {
+    try {
+      const data = await fetchTopProducts();
+      setTopProducts(data);
+    } catch (error) {
+      console.error("Failed to fetch top products:", error);
+      setTopProducts([]);
+    }
+  });
 
   const loadCategories = useEffectEvent(async (preferredCategoryId = null) => {
     setLoadingCategories(true);
@@ -266,6 +278,11 @@ function Home() {
       return;
     }
 
+    if (payload.entity === "top_products") {
+      void loadTopProducts();
+      return;
+    }
+
     if (payload.entity === "item") {
       const nextItemState = applyItemChange({
         items: itemsRef.current,
@@ -336,6 +353,7 @@ function Home() {
 
   useEffect(() => {
     void loadCategories();
+    void loadTopProducts();
   }, []);
 
   useEffect(() => {
@@ -741,6 +759,35 @@ function Home() {
           setCartOpen(true);
         }}
       />
+      {/* Premium Top Products Showcase */}
+      {topProducts && topProducts.length > 0 ? (
+        <section className="px-4 py-6 sm:px-6 max-w-7xl mx-auto w-full">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xl text-amber-400">★</span>
+            <h2 className="text-xl font-black text-white tracking-tight">Chef's Specialties</h2>
+          </div>
+          
+          <div className="flex gap-5 overflow-x-auto pb-5 pt-1 scrollbar-thin scrollbar-thumb-white/10 scroll-smooth -mx-4 px-4 sm:mx-0 sm:px-0">
+            {topProducts.map((item) => {
+              const cartQty = cart
+                .filter((cartItem) => cartItem.id === item.id)
+                .reduce((sum, cartItem) => sum + cartItem.qty, 0);
+
+              return (
+                <div key={item.id} className="w-[280px] shrink-0">
+                  <ItemCard
+                    item={item}
+                    onAddToCart={addToCart}
+                    onOpenAddons={openAddonsForItem}
+                    cartQty={cartQty}
+                    onRemoveFromCart={removeFromCart}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
       <CategoryBar
         categories={categories}
         selectedCategory={selectedCategory}

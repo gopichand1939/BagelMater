@@ -17,7 +17,26 @@ const MENU_ROUTE_MAP = {
   },
   menu_management: {
     path: "/category",
-    matchPaths: ["/category", "/addcategory", "/viewcategory/", "/editcategory/", "/deletecategory/", "/items", "/additem", "/viewitem/", "/edititem/", "/deleteitem/", "/addon", "/addaddon", "/viewaddon/", "/editaddon/", "/deleteaddon/", "/addon-items", "/addon-eligibility"],
+    matchPaths: [
+      "/category",
+      "/addcategory",
+      "/viewcategory/",
+      "/editcategory/",
+      "/deletecategory/",
+      "/items",
+      "/additem",
+      "/viewitem/",
+      "/edititem/",
+      "/deleteitem/",
+      "/addon",
+      "/addaddon",
+      "/viewaddon/",
+      "/editaddon/",
+      "/deleteaddon/",
+      "/addon-items",
+      "/addon-eligibility",
+      "/top-products"
+    ],
   },
   category: {
     path: "/category",
@@ -39,9 +58,17 @@ const MENU_ROUTE_MAP = {
     path: "/addon-eligibility",
     matchPaths: ["/addon-eligibility"],
   },
+  top_products: {
+    path: "/top-products",
+    matchPaths: ["/top-products"],
+  },
   offers: {
     path: "/offers",
     matchPaths: ["/offers"],
+  },
+  delivery_charges: {
+    path: "/delivery-charges",
+    matchPaths: ["/delivery-charges"],
   },
   orders: {
     path: "/orders",

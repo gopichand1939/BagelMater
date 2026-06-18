@@ -20,6 +20,11 @@ const messageRoutes = require("./messages/messageRoutes");
 const dashboardRoutes = require("./Dashboard/DashboardRoutes");
 const orderReportsRoutes = require("./Order_Reports/orderReportsRoutes");
 const orderReportsModel = require("./Order_Reports/orderReportsModel");
+const topProductRoutes = require("./TopProducts/TopProductRoutes");
+const offersRoutes = require("./Offers/OffersRoutes");
+const OffersModel = require("./Offers/OffersModel");
+const deliveryChargesRoutes = require("./DeliveryCharges/DeliveryChargesRoutes");
+const DeliveryChargesModel = require("./DeliveryCharges/DeliveryChargesModel");
 const { startOrderChangeSubscriber } = require("./realtime/orderChangeSubscriber");
 const { startPaymentChangeSubscriber } = require("./realtime/paymentChangeSubscriber");
 const { startCustomerChangeSubscriber } = require("./realtime/customerChangeSubscriber");
@@ -87,6 +92,9 @@ app.use("/messages", messageRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/api/order-reports", orderReportsRoutes);
 app.use("/order-reports", orderReportsRoutes);
+app.use("/top-products", topProductRoutes);
+app.use("/offers", offersRoutes);
+app.use("/delivery-charges", deliveryChargesRoutes);
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -100,6 +108,13 @@ const startServer = async () => {
     await addonModel.ensureAddonAccessMenu();
     await restaurantSettingsModel.ensureRestaurantSettingsTable();
     await orderReportsModel.ensureOrderReportsAccessControlData();
+    const topProductsModel = require("./TopProducts/TopProductsModal");
+    await topProductsModel.ensureTopProductsTable();
+    await topProductsModel.ensureTopProductsAccessMenu();
+    await OffersModel.ensureOffersTable();
+    await OffersModel.ensureOffersAccessMenu();
+    await DeliveryChargesModel.ensureDeliveryChargesTable();
+    await DeliveryChargesModel.ensureDeliveryChargesAccessMenu();
     const adminUpdatesGateway = createAdminUpdatesGateway(server);
 
     startOrderChangeSubscriber({

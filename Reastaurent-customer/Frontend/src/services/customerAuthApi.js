@@ -4,6 +4,7 @@ import {
   CUSTOMER_LOGOUT,
   CUSTOMER_REFRESH_TOKEN,
   CUSTOMER_REGISTER,
+  CHECK_SIGNUP_ELIGIBILITY,
 } from "../Utils/Constant";
 
 const parseJsonResponse = async (response) => {
@@ -61,4 +62,9 @@ export const changeCustomerPassword = async (payload, accessToken) => {
     token: accessToken,
   });
   return result;
+};
+
+export const checkSignupEligibility = async (email) => {
+  const result = await postJson(CHECK_SIGNUP_ELIGIBILITY, { email });
+  return result.data;
 };

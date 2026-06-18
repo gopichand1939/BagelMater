@@ -134,6 +134,94 @@ function StatTile({ label, value, tone = "emerald" }) {
   );
 }
 
+function PieChartSkeleton() {
+  return (
+    <div className="grid min-h-[280px] items-center gap-4 lg:grid-cols-[minmax(160px,0.72fr)_minmax(260px,1.08fr)]">
+      <div className="relative flex justify-center py-4">
+        {/* Outer Ring */}
+        <div className="h-44 w-44 rounded-full border-[18px] border-border-subtle/50 relative flex items-center justify-center">
+          <div className="absolute inset-[-18px] rounded-full border-[18px] border-transparent border-t-brand-500/20 animate-spin" style={{ animationDuration: "3s" }} />
+          <div className="shimmer-block h-8 w-16" />
+        </div>
+      </div>
+      <div className="grid max-h-[260px] content-start gap-2 overflow-y-auto pr-1">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="grid grid-cols-[12px_minmax(0,1fr)] gap-2 rounded-lg border border-border-subtle p-3">
+            <span className="mt-1 h-3 w-3 rounded-[3px] bg-slate-700/50" />
+            <div className="min-w-0 flex flex-col gap-1.5">
+              <div className="shimmer-block h-4 w-24" />
+              <div className="shimmer-block h-3 w-12" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LineChartSkeleton() {
+  return (
+    <div className="relative min-h-[280px] flex flex-col justify-between p-2">
+      {/* Grid lines */}
+      <div className="flex-1 flex flex-col justify-between py-4 border-l border-b border-border-subtle pr-4">
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <div key={idx} className="w-full border-t border-dashed border-border-subtle/40 h-0 relative">
+            {idx === 1 && (
+              <svg className="absolute top-[-20px] left-0 w-full h-[60px] overflow-visible animate-pulse" preserveAspectRatio="none">
+                <path
+                  d="M0,40 Q60,10 120,30 T240,10 T360,40 T480,20 T600,30"
+                  fill="none"
+                  stroke="var(--color-primary-500)"
+                  strokeWidth="2.5"
+                  className="opacity-20"
+                  strokeDasharray="4 4"
+                />
+              </svg>
+            )}
+          </div>
+        ))}
+      </div>
+      {/* X-axis labels */}
+      <div className="flex justify-between pl-6 pt-2">
+        {Array.from({ length: 6 }).map((_, idx) => (
+          <div key={idx} className="shimmer-block h-3 w-10" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, idx) => (
+        <tr key={idx} className="border-b border-border-subtle">
+          <td className="px-4 py-4"><div className="shimmer-block h-4 w-16" /></td>
+          <td className="px-4 py-4"><div className="shimmer-block h-4 w-28" /></td>
+          <td className="px-4 py-4"><div className="shimmer-block h-4 w-20" /></td>
+          <td className="px-4 py-4"><div className="shimmer-block h-4 w-20" /></td>
+          <td className="px-4 py-4"><div className="shimmer-block h-4 w-24" /></td>
+          <td className="px-4 py-4 text-right"><div className="shimmer-block h-4 w-14 ml-auto" /></td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function StatusAnalyticsSkeleton() {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div key={idx} className="rounded-lg border border-border-subtle p-4 flex flex-col gap-2">
+          <div className="shimmer-block h-3.5 w-20" />
+          <div className="shimmer-block h-7 w-12 mt-1" />
+          <div className="shimmer-block h-4.5 w-16" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DashboardReportsSection() {
   const [filters, setFilters] = useState({
     from_date: monthsAgo(4),
@@ -204,13 +292,14 @@ function DashboardReportsSection() {
   const topProductChartData = useMemo(
     () =>
       topProducts
-        .slice(0, 8)
         .map((product) => ({
           ...product,
           total_sales: Number(product.total_sales || 0),
           total_quantity: Number(product.total_quantity || 0),
         }))
-        .filter((product) => product.total_sales > 0),
+        .filter((product) => product.total_quantity > 0)
+        .sort((first, second) => second.total_quantity - first.total_quantity)
+        .slice(0, 8),
     [topProducts]
   );
   const hourlySales = Array.isArray(report?.hourlySales) ? report.hourlySales : [];
@@ -219,25 +308,8 @@ function DashboardReportsSection() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="m-0 text-sm font-black uppercase tracking-[0.16em] text-brand-600">
-            Reports
-          </p>
-          <h2 className="m-0 text-2xl font-bold text-text-strong">Reports Preview</h2>
-        </div>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand-500 px-4 font-bold text-white shadow-[0_10px_22px_rgba(16,185,129,0.2)] transition hover:bg-brand-600"
-          onClick={loadReport}
-        >
-          <LuRefreshCw size={18} />
-          Refresh
-        </button>
-      </div>
-
       <Card className="grid gap-4" padding="sm">
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-6 items-end">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 items-end">
           <label className="grid gap-1.5 text-xs font-bold text-text-muted">
             From Date
             <input
@@ -312,6 +384,15 @@ function DashboardReportsSection() {
             <LuSearch size={14} />
             Apply
           </button>
+
+          <button
+            type="button"
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-brand-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-brand-600 transition cursor-pointer w-full"
+            onClick={loadReport}
+          >
+            <LuRefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
         </div>
       </Card>
 
@@ -322,27 +403,29 @@ function DashboardReportsSection() {
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Total Orders" value={loading ? "..." : summary.total_orders || 0} />
-        <StatTile label="Revenue" value={loading ? "..." : formatCurrency(summary.total_revenue)} tone="blue" />
-        <StatTile label="COD Pending" value={loading ? "..." : formatCurrency(summary.cod_pending_amount)} tone="amber" />
-        <StatTile label="Paid Amount" value={loading ? "..." : formatCurrency(summary.paid_amount)} />
-        <StatTile label="Delivered" value={loading ? "..." : summary.total_delivered || 0} tone="blue" />
-        <StatTile label="Cancelled" value={loading ? "..." : summary.total_cancelled || 0} tone="rose" />
-        <StatTile label="Average Order Value" value={loading ? "..." : formatCurrency(summary.average_order_value)} />
-        <StatTile label="Total Tax" value={loading ? "..." : formatCurrency(summary.total_tax_collected)} tone="blue" />
+        <StatTile label="Total Orders" value={loading ? <div className="shimmer-block h-8 w-16" /> : summary.total_orders || 0} />
+        <StatTile label="Revenue" value={loading ? <div className="shimmer-block h-8 w-32" /> : formatCurrency(summary.total_revenue)} tone="blue" />
+        <StatTile label="COD Pending" value={loading ? <div className="shimmer-block h-8 w-28" /> : formatCurrency(summary.cod_pending_amount)} tone="amber" />
+        <StatTile label="Paid Amount" value={loading ? <div className="shimmer-block h-8 w-28" /> : formatCurrency(summary.paid_amount)} />
+        <StatTile label="Delivered" value={loading ? <div className="shimmer-block h-8 w-16" /> : summary.total_delivered || 0} tone="blue" />
+        <StatTile label="Cancelled" value={loading ? <div className="shimmer-block h-8 w-16" /> : summary.total_cancelled || 0} tone="rose" />
+        <StatTile label="Average Order Value" value={loading ? <div className="shimmer-block h-8 w-24" /> : formatCurrency(summary.average_order_value)} />
+        <StatTile label="Total Tax" value={loading ? <div className="shimmer-block h-8 w-20" /> : formatCurrency(summary.total_tax_collected)} tone="blue" />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
 
         <Card className="grid min-h-[360px] gap-4">
           <h3 className="m-0 text-lg font-bold text-text-strong">Top Products</h3>
-          {topProductChartData.length > 0 ? (
+          {loading ? (
+            <PieChartSkeleton />
+          ) : topProductChartData.length > 0 ? (
             <div className="grid min-h-[280px] items-center gap-4 lg:grid-cols-[minmax(160px,0.72fr)_minmax(260px,1.08fr)]">
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie
                     data={topProductChartData}
-                    dataKey="total_sales"
+                    dataKey="total_quantity"
                     nameKey="item_name"
                     cx="50%"
                     cy="50%"
@@ -358,7 +441,7 @@ function DashboardReportsSection() {
                       />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
+                  <Tooltip formatter={(value) => `${value} sold`} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="grid max-h-[260px] content-start gap-2 overflow-y-auto pr-1">
@@ -377,11 +460,11 @@ function DashboardReportsSection() {
                           {product.item_name}
                         </span>
                         <span className="text-sm font-black text-text-strong">
-                          {formatCurrency(product.total_sales)}
+                          {product.total_quantity} sold
                         </span>
                       </div>
                       <p className="m-0 mt-1 text-xs font-semibold text-text-muted">
-                        {product.total_quantity} sold
+                        Revenue: {formatCurrency(product.total_sales)}
                       </p>
                     </div>
                   </div>
@@ -396,64 +479,43 @@ function DashboardReportsSection() {
         </Card>
 
         <Card className="grid min-h-[360px] gap-4">
-          <h3 className="m-0 text-lg font-bold text-text-strong">Payment Analytics</h3>
-          {payments?.length > 0 ? (
-            <div className="grid min-h-[280px] items-center gap-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(240px,1fr)]">
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={payments}
-                    dataKey="total_amount"
-                    nameKey="payment_status"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={52}
-                    outerRadius={92}
-                    paddingAngle={3}
-                    stroke="var(--color-surface-panel)"
-                    strokeWidth={3}
-                  >
-                    {payments?.map((entry, index) => (
-                      <Cell
-                        key={`${entry.payment_status}-${entry.payment_method}`}
-                        fill={paymentColors[entry.payment_status] || colors[index % colors.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
-                  <Legend verticalAlign="bottom" height={28} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="grid content-center gap-2">
-                {payments?.map((payment, index) => (
-                  <div
-                    key={`${payment.payment_status}-${index}`}
-                    className="grid grid-cols-[12px_minmax(0,1fr)] gap-2 rounded-lg border border-border-subtle p-3"
-                  >
-                    <span
-                      className="mt-1 h-3 w-3 rounded-[3px]"
-                      style={{ backgroundColor: paymentColors[payment.payment_status] || colors[index % colors.length] }}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-black capitalize text-text-strong">
-                          {payment.payment_status}
-                        </span>
-                        <span className="text-sm font-black text-text-strong">
-                          {formatCurrency(payment.total_amount)}
-                        </span>
-                      </div>
-                      <p className="m-0 mt-1 text-xs font-semibold text-text-muted">
-                        {payment.total_orders} orders
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <h3 className="m-0 text-lg font-bold text-text-strong">Hourly Sales Analytics</h3>
+          {loading ? (
+            <LineChartSkeleton />
+          ) : hourlySales?.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={hourlySales} margin={{ top: 12, right: 18, left: 6, bottom: 6 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hour_label" tickFormatter={renderHourlyTick} minTickGap={18} />
+                <YAxis yAxisId="sales" tickFormatter={(value) => formatCurrency(value)} width={74} />
+                <YAxis yAxisId="orders" orientation="right" allowDecimals={false} width={44} />
+                <Tooltip formatter={formatHourlyMetric} />
+                <Legend />
+                <Line
+                  yAxisId="sales"
+                  type="monotone"
+                  dataKey="total_sales"
+                  name="Hourly sales"
+                  stroke="#f97316"
+                  strokeWidth={3}
+                  dot={{ r: 3, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  yAxisId="orders"
+                  type="monotone"
+                  dataKey="delivered_orders"
+                  name="Delivered orders"
+                  stroke="#8b5cf6"
+                  strokeWidth={3}
+                  dot={{ r: 3, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
             <div className="flex h-[280px] items-center justify-center rounded-lg border border-border-subtle text-sm font-semibold text-text-muted">
-              No payment analytics available.
+              No hourly sales analytics available.
             </div>
           )}
         </Card>
@@ -464,21 +526,22 @@ function DashboardReportsSection() {
           <div className="grid gap-1">
             <h3 className="m-0 text-lg font-bold text-text-strong">Orders Table</h3>
             <div className="text-sm font-semibold text-text-muted">
-              Peak: {summary.peak_sales_hour || "-"} - Top Product: {summary.top_selling_product || "-"}
+              Peak: {loading ? "..." : summary.peak_sales_hour || "-"} - Top Product: {loading ? "..." : summary.top_selling_product || "-"}
             </div>
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div className="rounded-lg border border-border-subtle bg-surface-panel px-3 py-2 text-sm font-semibold text-text-muted">
               {filters.payment_method ? `${formatFilterLabel(filters.payment_method)} Orders` : "Total Orders"}
-              <span className="ml-2 font-black text-text-strong">{selectedMethodOrderCount}</span>
+              <span className="ml-2 font-black text-text-strong">{loading ? "..." : selectedMethodOrderCount}</span>
             </div>
             <label className="grid gap-1 text-sm font-bold text-text-muted">
               Method Filter
               <select
                 name="payment_method"
+                disabled={loading}
                 value={filters.payment_method}
                 onChange={handleFilterChange}
-                className="min-h-10 min-w-[220px] rounded-lg border border-border-subtle bg-white px-3 text-text-strong"
+                className="min-h-10 min-w-[220px] rounded-lg border border-border-subtle bg-white px-3 text-text-strong disabled:opacity-50"
               >
                 {paymentMethodOptions.map((option) => (
                   <option key={option || "all-table"} value={option}>
@@ -505,21 +568,25 @@ function DashboardReportsSection() {
               </tr>
             </thead>
             <tbody>
-              {displayedOrders.map((order) => (
-                <tr key={order.id} className="border-b border-border-subtle">
-                  <td className="px-4 py-3 font-bold text-text-strong">{order.order_number}</td>
-                  <td className="px-4 py-3 text-text-base">{order.customer_name}</td>
-                  {/*
-                  <td className="max-w-[280px] truncate px-4 py-3 text-text-muted">{order.ordered_items}</td>
-                  */}
-                  <td className="px-4 py-3 text-text-base">{order.order_status}</td>
-                  <td className="px-4 py-3 text-text-base">{order.payment_status}</td>
-                  <td className="px-4 py-3 text-text-base">{order.payment_method}</td>
-                  <td className="px-4 py-3 text-right font-bold text-text-strong">
-                    {formatCurrency(order.total_amount)}
-                  </td>
-                </tr>
-              ))}
+              {loading ? (
+                <TableSkeleton />
+              ) : (
+                displayedOrders.map((order) => (
+                  <tr key={order.id} className="border-b border-border-subtle">
+                    <td className="px-4 py-3 font-bold text-text-strong">{order.order_number}</td>
+                    <td className="px-4 py-3 text-text-base">{order.customer_name}</td>
+                    {/*
+                    <td className="max-w-[280px] truncate px-4 py-3 text-text-muted">{order.ordered_items}</td>
+                    */}
+                    <td className="px-4 py-3 text-text-base">{order.order_status}</td>
+                    <td className="px-4 py-3 text-text-base">{order.payment_status}</td>
+                    <td className="px-4 py-3 text-text-base">{order.payment_method}</td>
+                    <td className="px-4 py-3 text-right font-bold text-text-strong">
+                      {formatCurrency(order.total_amount)}
+                    </td>
+                  </tr>
+                ))
+              )}
               {!loading && displayedOrders.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-8 text-center font-semibold text-text-muted">
@@ -534,15 +601,19 @@ function DashboardReportsSection() {
 
       <Card className="grid gap-4">
         <h3 className="m-0 text-lg font-bold text-text-strong">Order Status Analytics</h3>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {statusAnalytics.map((status) => (
-            <div key={status.order_status} className="rounded-lg border border-border-subtle p-4">
-              <p className="m-0 text-sm font-bold capitalize text-text-muted">{status.order_status}</p>
-              <strong className="mt-2 block text-2xl text-text-strong">{status.total_orders}</strong>
-              <span className="text-sm font-semibold text-brand-600">{formatCurrency(status.total_amount)}</span>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <StatusAnalyticsSkeleton />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {statusAnalytics.map((status) => (
+              <div key={status.order_status} className="rounded-lg border border-border-subtle p-4">
+                <p className="m-0 text-sm font-bold capitalize text-text-muted">{status.order_status}</p>
+                <strong className="mt-2 block text-2xl text-text-strong">{status.total_orders}</strong>
+                <span className="text-sm font-semibold text-brand-600">{formatCurrency(status.total_amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </section>
   );

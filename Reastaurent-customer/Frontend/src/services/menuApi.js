@@ -2,6 +2,7 @@ import {
   CATEGORY_LIST,
   ITEM_ADDONS,
   ITEMS_BY_CATEGORY,
+  TOP_PRODUCTS,
 } from "../Utils/Constant";
 
 const postJson = async (url, body = {}) => {
@@ -44,3 +45,9 @@ export const fetchItemAddons = async (itemId) => {
 
   return data.data || [];
 };
+
+export const fetchTopProducts = async () => {
+  const data = await postJson(TOP_PRODUCTS);
+  return data.data || [];
+};
+

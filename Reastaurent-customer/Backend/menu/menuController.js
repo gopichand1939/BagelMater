@@ -241,8 +241,55 @@ const getItemAddons = async (req, res) => {
   }
 };
 
+const getTopProducts = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        i.id,
+        tp.id AS top_product_id,
+        tp.sort_order,
+        i.item_name,
+        i.item_description,
+        i.item_image,
+        i.price,
+        i.discount_price,
+        i.is_veg,
+        i.is_new,
+        i.is_popular,
+        c.category_name
+      FROM top_products tp
+      INNER JOIN items i ON i.id = tp.item_id
+      LEFT JOIN category c ON c.id = i.category_id
+      WHERE tp.is_deleted = 0
+        AND tp.is_active = 1
+        AND i.is_deleted = 0
+        AND i.is_active = 1
+        AND (c.id IS NULL OR (c.is_deleted = 0 AND c.is_active = 1))
+      ORDER BY tp.sort_order ASC, tp.id ASC
+    `);
+
+    const items = result.rows.map((row) =>
+      attachImageUrl(req, row, "item_image")
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: items,
+    });
+  } catch (error) {
+    console.error("Error fetching top products:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch top products",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCategory,
   getItemsByCategory,
   getItemAddons,
+  getTopProducts,
 };
+

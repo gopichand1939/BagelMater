@@ -51,6 +51,13 @@ export const ITEM_UPDATE = `${BACKEND_BASE_URL}/items/update_item`;
 export const ITEM_DELETE = `${BACKEND_BASE_URL}/items/delete_item`;
 export const ITEM_REORDER = `${BACKEND_BASE_URL}/items/reorder_items`;
 
+export const TOP_PRODUCT_LIST = `${BACKEND_BASE_URL}/top-products/list`;
+export const TOP_PRODUCT_ADD = `${BACKEND_BASE_URL}/top-products/add`;
+export const TOP_PRODUCT_UPDATE = `${BACKEND_BASE_URL}/top-products/update`;
+export const TOP_PRODUCT_DELETE = `${BACKEND_BASE_URL}/top-products/delete`;
+export const TOP_PRODUCT_REORDER = `${BACKEND_BASE_URL}/top-products/reorder`;
+export const TOP_PRODUCT_SEARCH_ITEMS = `${BACKEND_BASE_URL}/top-products/search-items`;
+
 export const ADDON_GROUP_CREATE = `${BACKEND_BASE_URL}/addons/create_addon_group`;
 export const ADDON_GROUP_LIST = `${BACKEND_BASE_URL}/addons/addon_group_list`;
 export const ADDON_GROUP_BY_ID = `${BACKEND_BASE_URL}/addons/add_on_master_getById`;
@@ -122,6 +129,8 @@ export const NOTIFICATION_UNREAD_SUMMARY = `${BACKEND_BASE_URL}/notifications/un
 
 export const MESSAGE_SETTINGS = `${BACKEND_BASE_URL}/messages/settings`;
 export const MESSAGE_TEST_MAIL = `${BACKEND_BASE_URL}/messages/test-mail`;
+export const OFFERS_SETTINGS = `${BACKEND_BASE_URL}/offers/settings`;
+export const DELIVERY_CHARGES_SETTINGS = `${BACKEND_BASE_URL}/delivery-charges/settings`;
 
 export const ADMIN_UPDATES_WS_URL =
   trimTrailingSlash(import.meta.env.VITE_ADMIN_UPDATES_WS_URL) ||

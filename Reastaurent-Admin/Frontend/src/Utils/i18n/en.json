@@ -14,10 +14,12 @@
       "menu_management": "Menu Management",
       "category": "Category",
       "items": "Items",
-      "addon": "Addon Group Master",
-      "addon_item_master": "Addon Item Master",
-      "addons_eligible_for_items": "Addons Eligible For Items",
+      "addon": "Add-on Groups",
+      "addon_item_master": "Add-on Items",
+      "addons_eligible_for_items": "Link Add-ons",
+      "top_products": "Top Products",
       "offers": "Offers",
+      "delivery_charges": "Delivery Charges",
       "orders": "Orders",
       "payments": "Payments",
       "reports": "Reports",
@@ -26,11 +28,6 @@
       "user_management": "User Management",
       "notifications": "Notifications",
       "messages": "Messages"
-
-
-
-
-      
     },
     "actions": {
       "logout": "Logout"

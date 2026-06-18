@@ -241,6 +241,79 @@ function DefaultIcon(props) {
   );
 }
 
+function OffersIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M20.5 11.5L12.5 3.5H4.5v8l8 8a2.12 2.12 0 0 0 3 0l5-5a2.12 2.12 0 0 0 0-3z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function AddonGroupsIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <rect x="3.5" y="4" width="17" height="4.5" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="3.5" y="11.5" width="17" height="4.5" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="3.5" y="19" width="17" height="1.5" rx="0.75" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function AddonItemsIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="5.5" cy="6.5" r="1.5" fill="currentColor" />
+      <path d="M10 6.5h10.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="5.5" cy="12.5" r="1.5" fill="currentColor" />
+      <path d="M10 12.5h10.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="5.5" cy="18.5" r="1.5" fill="currentColor" />
+      <path d="M10 18.5h10.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LinkAddonsIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TopProductsIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function LogoutIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
@@ -293,9 +366,11 @@ const iconMap = {
   messages: MessagesIcon,
   category: CategoryIcon,
   items: ItemIcon,
-  addon: ItemIcon,
-  addon_item_master: ItemIcon,
-  addons_eligible_for_items: ItemIcon,
+  addon: AddonGroupsIcon,
+  addon_item_master: AddonItemsIcon,
+  addons_eligible_for_items: LinkAddonsIcon,
+  top_products: TopProductsIcon,
+  offers: OffersIcon,
 };
 
 const isPathMatched = (pathname, menuKey = "", children = []) => {

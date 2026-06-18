@@ -4,7 +4,8 @@
 
 @layer base {
   body {
-    @apply m-0 bg-[#0f0c29] font-sans text-white antialiased;
+    @apply m-0 bg-[#0f0c29] text-white antialiased;
+    font-family: "Plus Jakarta Sans", "Outfit", "Inter", sans-serif;
   }
 
   #root {
@@ -13,6 +14,7 @@
 
   * {
     @apply box-border;
+    font-family: "Plus Jakarta Sans", "Outfit", "Inter", sans-serif;
   }
 
   button,

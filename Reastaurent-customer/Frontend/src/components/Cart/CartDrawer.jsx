@@ -8,8 +8,10 @@ import {
 import {
   STRIPE_MIN_INR_AMOUNT,
   STRIPE_PUBLISHABLE_KEY,
+  DELIVERY_CHARGES_CONFIG,
 } from "../../Utils/Constant";
 import { getStripeClient } from "../../Utils/stripeClient";
+import { checkSignupEligibility } from "../../services/customerAuthApi";
 
 function CartDrawer({
   cart,
@@ -37,6 +39,80 @@ function CartDrawer({
   const [successMessage, setSuccessMessage] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash_on_delivery");
   const [stripeLoading, setStripeLoading] = useState(false);
+  const [deliverySettings, setDeliverySettings] = useState({
+    base_charge: 30,
+    charge_per_km: 10,
+    free_delivery_threshold: 500,
+  });
+  const [isNewUserPromoEligible, setIsNewUserPromoEligible] = useState(false);
+  const [distance, setDistance] = useState(0);
+  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
+
+  // Fetch delivery charges settings on mount
+  useEffect(() => {
+    const fetchDeliverySettings = async () => {
+      try {
+        const res = await fetch(DELIVERY_CHARGES_CONFIG);
+        const data = await res.json();
+        if (data.success && data.data) {
+          setDeliverySettings({
+            base_charge: Number(data.data.base_charge),
+            charge_per_km: Number(data.data.charge_per_km),
+            free_delivery_threshold: Number(data.data.free_delivery_threshold),
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching delivery charges settings:", error);
+      }
+    };
+    fetchDeliverySettings();
+  }, []);
+
+  // Check if user is eligible for welcome promotion
+  useEffect(() => {
+    const checkPromo = async () => {
+      if (customer && customer.email) {
+        try {
+          const data = await checkSignupEligibility(customer.email);
+          if (data && data.eligible) {
+            setIsNewUserPromoEligible(true);
+          } else {
+            setIsNewUserPromoEligible(false);
+          }
+        } catch (error) {
+          console.error("Error checking promo eligibility:", error);
+        }
+      } else {
+        setIsNewUserPromoEligible(false);
+      }
+    };
+    checkPromo();
+  }, [customer]);
+
+  // Simulate distance calculation dynamically based on pincode
+  useEffect(() => {
+    const pin = deliveryForm.pincode.trim();
+    if (pin.length >= 3) {
+      setIsCalculatingDistance(true);
+      const timer = setTimeout(() => {
+        // Simple deterministic hash based on pincode
+        let hash = 0;
+        for (let i = 0; i < pin.length; i++) {
+          hash = pin.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const min = 2.0;
+        const max = 8.0;
+        const range = max - min;
+        const seed = Math.abs(hash) % 100;
+        const calculatedDistance = Math.round((min + (seed / 99) * range) * 10) / 10;
+        setDistance(calculatedDistance);
+        setIsCalculatingDistance(false);
+      }, 400); // Visual delay for realistic calculation
+      return () => clearTimeout(timer);
+    } else {
+      setDistance(0);
+    }
+  }, [deliveryForm.pincode]);
 
   useEffect(() => {
     setDeliveryForm((prev) => ({
@@ -46,7 +122,7 @@ function CartDrawer({
     }));
   }, [customer]);
 
-  const total = cart.reduce((sum, item) => {
+  const cartSubtotal = cart.reduce((sum, item) => {
     const price =
       item.discount_price && item.discount_price < item.price
         ? item.discount_price
@@ -55,8 +131,21 @@ function CartDrawer({
     return sum + (Number(price) + Number(item.addon_total || 0)) * item.qty;
   }, 0);
 
+  const total = cartSubtotal; // keep total for backward compatibility
+
+  let deliveryFee = 0;
+  if (distance > 0) {
+    deliveryFee = Number(deliverySettings.base_charge) + (distance * Number(deliverySettings.charge_per_km));
+  }
+
+  const isFreeDeliveryByThreshold = cartSubtotal >= Number(deliverySettings.free_delivery_threshold);
+  const isFreeDeliveryByPromo = isNewUserPromoEligible;
+  const isFreeDelivery = isFreeDeliveryByThreshold || isFreeDeliveryByPromo;
+  const finalDeliveryFee = isFreeDelivery ? 0 : deliveryFee;
+  const grandTotal = cartSubtotal + finalDeliveryFee;
+
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  const isStripeAmountAllowed = total >= STRIPE_MIN_INR_AMOUNT;
+  const isStripeAmountAllowed = grandTotal >= STRIPE_MIN_INR_AMOUNT;
   const isStripeOptionDisabled =
     !STRIPE_PUBLISHABLE_KEY || !isStripeAmountAllowed;
 
@@ -136,8 +225,10 @@ function CartDrawer({
           city: deliveryForm.city.trim(),
           state: deliveryForm.state.trim(),
           pincode: deliveryForm.pincode.trim(),
+          distance: distance,
         },
         order_notes: orderNotes.trim(),
+        delivery_fee: finalDeliveryFee,
       };
 
       if (paymentMethod === "stripe") {
@@ -435,10 +526,42 @@ function CartDrawer({
 
         {cart.length > 0 ? (
           <div className="border-t border-white/10 bg-white/[0.02] px-6 py-5">
+            <div className="mb-4 flex flex-col gap-2 border-b border-white/10 pb-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60">Subtotal</span>
+                <span className="font-semibold text-white">Rs {cartSubtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60">Delivery Distance</span>
+                <span className="font-semibold text-white">
+                  {isCalculatingDistance ? (
+                    <span className="text-xs text-amber-400 animate-pulse">Calculating...</span>
+                  ) : distance > 0 ? (
+                    `${distance} km`
+                  ) : (
+                    <span className="text-xs text-white/40">Enter pincode</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60">Delivery Fee</span>
+                <span className="font-semibold">
+                  {isFreeDeliveryByPromo ? (
+                    <span className="text-emerald-400 text-xs font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">FREE (Welcome Offer)</span>
+                  ) : isFreeDeliveryByThreshold ? (
+                    <span className="text-emerald-400 text-xs font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">FREE (Order &gt; Rs {deliverySettings.free_delivery_threshold})</span>
+                  ) : distance > 0 ? (
+                    <span className="text-white">Rs {deliveryFee.toFixed(2)}</span>
+                  ) : (
+                    <span className="text-xs text-white/40">Enter pincode</span>
+                  )}
+                </span>
+              </div>
+            </div>
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-[15px] text-white/60">Total</span>
+              <span className="text-[15px] font-bold text-white">Total</span>
               <span className="text-[22px] font-extrabold text-white">
-                Rs {total.toFixed(2)}
+                Rs {grandTotal.toFixed(2)}
               </span>
             </div>
             {errorMessage ? (

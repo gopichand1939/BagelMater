@@ -12,7 +12,9 @@ const Register = lazy(() => import("../Pages/Register/Register"));
 const Dashboard = lazy(() => import("../components/Dashboard/Dashboard"));
 const RestaurantTimings = lazy(() => import("../components/Restaurant/RestaurantTimings"));
 const ModulePlaceholder = lazy(() => import("../components/common/ModulePlaceholder"));
+const Offers = lazy(() => import("../components/Offers/Offers"));
 const OrderReports = lazy(() => import("../components/Reports/OrderReports"));
+const DeliveryCharges = lazy(() => import("../components/DeliveryCharges/DeliveryCharges"));
 
 // Category Module
 const Category = lazy(() => import("../components/Category/Category"));
@@ -134,7 +136,11 @@ export const appRoutes = [
       },
       {
         path: "offers",
-        element: withSuspense(<ModulePlaceholder title="Offers" />),
+        element: withSuspense(<Offers />),
+      },
+      {
+        path: "delivery-charges",
+        element: withSuspense(<DeliveryCharges />),
       },
       {
         path: "addon",
