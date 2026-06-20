@@ -15,6 +15,7 @@ const ModulePlaceholder = lazy(() => import("../components/common/ModulePlacehol
 const Offers = lazy(() => import("../components/Offers/Offers"));
 const OrderReports = lazy(() => import("../components/Reports/OrderReports"));
 const DeliveryCharges = lazy(() => import("../components/DeliveryCharges/DeliveryCharges"));
+const TopProducts = lazy(() => import("../components/TopProducts/TopProducts"));
 
 // Category Module
 const Category = lazy(() => import("../components/Category/Category"));
@@ -141,6 +142,10 @@ export const appRoutes = [
       {
         path: "delivery-charges",
         element: withSuspense(<DeliveryCharges />),
+      },
+      {
+        path: "top-products",
+        element: withSuspense(<TopProducts />),
       },
       {
         path: "addon",
