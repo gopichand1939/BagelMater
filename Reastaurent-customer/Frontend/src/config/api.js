@@ -33,11 +33,9 @@ export const API_BASE_URL = trimTrailingSlash(
 export const CATEGORY_LIST = `${API_BASE_URL}/categories`;
 export const ITEMS_BY_CATEGORY = `${API_BASE_URL}/items-by-category`;
 export const ITEM_ADDONS = `${API_BASE_URL}/item-addons`;
-export const TOP_PRODUCTS = `${API_BASE_URL}/top-products`;
 export const CUSTOMER_REGISTER = `${API_BASE_URL}/auth/register`;
-export const CHECK_SIGNUP_ELIGIBILITY = `${API_BASE_URL}/new-user-signup/check-eligibility`;
 export const CUSTOMER_LOGIN = `${API_BASE_URL}/auth/login`;
-export const CUSTOMER_REFRESH_TOKEN = `${API_BASE_URL}/auth/refresh-token`;
+export const  CUSTOMER_REFRESH_TOKEN = `${API_BASE_URL}/auth/refresh-token`;
 export const CUSTOMER_LOGOUT = `${API_BASE_URL}/auth/logout`;
 export const CUSTOMER_CHANGE_PASSWORD = `${API_BASE_URL}/auth/change-password`;
 export const CUSTOMER_PROFILE = `${API_BASE_URL}/customer/profile`;
@@ -54,7 +52,7 @@ export const CUSTOMER_NOTIFICATION_BY_ID = `${API_BASE_URL}/notifications/by-id`
 export const CUSTOMER_NOTIFICATION_MARK_READ = `${API_BASE_URL}/notifications/mark-as-read`;
 export const CUSTOMER_NOTIFICATION_MARK_ALL_READ = `${API_BASE_URL}/notifications/mark-all-as-read`;
 export const CUSTOMER_NOTIFICATION_UNREAD_SUMMARY = `${API_BASE_URL}/notifications/unread-summary`;
-export const DELIVERY_CHARGES_CONFIG = `${API_BASE_URL}/delivery-charges/settings`;
+export const RESTAURANT_SETTINGS = `${API_BASE_URL}/restaurant/settings`;
 
 export const MENU_UPDATES_WS_URL =
   trimTrailingSlash(import.meta.env.VITE_MENU_UPDATES_WS_URL) ||

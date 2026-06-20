@@ -8,18 +8,14 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
     setSelectedAddons([]);
   }, [item?.id]);
 
-
-//transformar
-
-
-  // Transform addons into groups with options
-
-  const addonGroups = useMemo(() => {
-    return addons.map((group) => ({
-      addon_group: group.addon_group || group.title || "Add-ons",
-      title: group.title || group.addon_group || "Add-ons",
-      options: Array.isArray(group.options) ? group.options : [],
-    }));
+  const groupedAddons = useMemo(() => {
+    return addons.reduce((groups, addon) => {
+      if (!groups[addon.addon_group]) {
+        groups[addon.addon_group] = [];
+      }
+      groups[addon.addon_group].push(addon);
+      return groups;
+    }, {});
   }, [addons]);
 
   const basePrice =
@@ -34,21 +30,13 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
 
   const totalPrice = (basePrice + addonTotal).toFixed(2);
 
-  const toggleAddon = (addon, group) => {
+  const toggleAddon = (addon) => {
     setSelectedAddons((prev) => {
       const exists = prev.some((selected) => selected.id === addon.id);
       if (exists) {
         return prev.filter((selected) => selected.id !== addon.id);
       }
-
-      return [
-        ...prev,
-        {
-          ...addon,
-          addonOptionId: addon.addonOptionId ?? addon.id,
-          addon_group: group.addon_group,
-        },
-      ];
+      return [...prev, addon];
     });
   };
 
@@ -94,24 +82,22 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
             <div className="py-8 text-center text-[15px] text-white/55">
               Loading add-ons...
             </div>
-          ) : addonGroups.length === 0 ? (
+          ) : addons.length === 0 ? (
             <div className="py-5 text-center text-[15px] text-white/55">
               No add-ons available for this item.
             </div>
           ) : (
-            addonGroups.map((group) => (
+            Object.entries(groupedAddons).map(([groupName, groupAddons]) => (
               <div
-                key={group.addon_group}
+                key={groupName}
                 className="rounded-[18px] border border-white/10 bg-white/[0.04] p-4"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="m-0 text-base font-bold text-white">
-                    {group.title}
-                  </h3>
-                </div>
+                <h3 className="m-0 text-base font-bold text-white">
+                  {groupName}
+                </h3>
 
                 <div className="mt-[14px] flex flex-col gap-2.5">
-                  {group.options.map((addon) => {
+                  {groupAddons.map((addon) => {
                     const isSelected = selectedAddons.some(
                       (selected) => selected.id === addon.id
                     );
@@ -119,7 +105,7 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
                     return (
                       <button
                         key={addon.id}
-                        onClick={() => toggleAddon(addon, group)}
+                        onClick={() => toggleAddon(addon)}
                         className={`flex items-center justify-between rounded-[14px] px-4 py-[14px] text-left transition ${
                           isSelected
                             ? "border border-amber-400/60 bg-gradient-to-br from-amber-500/20 to-red-500/20"
@@ -136,7 +122,7 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
                         </div>
 
                         <div className="text-sm font-extrabold text-amber-300">
-                          +£{Number(addon.addon_price || 0).toFixed(2)}
+                          +₹{Number(addon.addon_price || 0).toFixed(2)}
                         </div>
                       </button>
                     );
@@ -153,7 +139,7 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
               Total
             </div>
             <div className="mt-1 text-[26px] font-extrabold text-white">
-              £{totalPrice}
+              ₹{totalPrice}
             </div>
           </div>
 

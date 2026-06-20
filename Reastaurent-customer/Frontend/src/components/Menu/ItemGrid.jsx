@@ -1,33 +1,7 @@
 import { useState } from "react";
 import { getImageUrl } from "../../Utils/imageUrl";
 
-const getFoodTypeMarker = (value) => {
-  const normalized = String(value || "").trim().toLowerCase();
-
-  if (normalized === "vegan") {
-    return {
-      borderClassName: "border-green-500",
-      dotClassName: "bg-green-500",
-      label: "Vegan",
-    };
-  }
-
-  if (normalized === "halal") {
-    return {
-      borderClassName: "border-red-500",
-      dotClassName: "bg-red-500",
-      label: "Halal",
-    };
-  }
-
-  return {
-    borderClassName: "border-slate-300",
-    dotClassName: "bg-slate-300",
-    label: "N/A",
-  };
-};
-
-export function ItemCard({
+function ItemCard({
   item,
   onAddToCart,
   onOpenAddons,
@@ -36,16 +10,13 @@ export function ItemCard({
 }) {
   const [hovered, setHovered] = useState(false);
   const hasDiscount = item.discount_price && item.discount_price < item.price;
-  const foodTypeMarker = getFoodTypeMarker(item.is_veg);
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`flex flex-col overflow-hidden rounded-[20px] border border-white/[0.06] transition-all duration-300 ${
-        hovered
-          ? "-translate-y-1 bg-white/[0.08] shadow-glow"
-          : "translate-y-0 bg-white/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+      className={`customer-card flex flex-col overflow-hidden p-0 transition-all duration-500 ${
+        hovered ? "-translate-y-2 shadow-premium border-cafe-gold/30" : "translate-y-0"
       }`}
     >
       <button
@@ -58,103 +29,105 @@ export function ItemCard({
             alt={item.item_name}
             loading="lazy"
             decoding="async"
-            className={`h-[180px] w-full object-cover transition-transform duration-500 ${
-              hovered ? "scale-[1.08]" : "scale-100"
+            className={`h-[220px] w-full object-cover transition-transform duration-700 ${
+              hovered ? "scale-110" : "scale-100"
             }`}
           />
         ) : (
-          <div className="grid h-[180px] w-full place-items-center bg-gradient-to-br from-[#1a1a2e] to-[#16213e] text-5xl">
-            🍽️
+          <div className="grid h-[220px] w-full place-items-center bg-[#1c1917] text-5xl">
+            ☕
           </div>
         )}
 
-        <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#110e0d] via-transparent to-transparent opacity-80" />
+
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           {item.is_new === 1 ? (
-            <span className="rounded-full bg-gradient-to-br from-violet-500 to-violet-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.5px] text-white">
+            <span className="rounded-full bg-white px-3 py-1 font-sans text-[10px] font-bold uppercase tracking-wider text-[#110e0d] shadow-lg">
               New
             </span>
           ) : null}
           {item.is_popular === 1 ? (
-            <span className="rounded-full bg-gradient-to-br from-amber-500 to-amber-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.5px] text-white">
+            <span className="rounded-full bg-cafe-gold px-3 py-1 font-sans text-[10px] font-bold uppercase tracking-wider text-[#110e0d] shadow-lg">
               Popular
             </span>
           ) : null}
           {hasDiscount ? (
-            <span className="rounded-full bg-gradient-to-br from-red-500 to-red-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.5px] text-white">
-              {Math.round(((item.price - item.discount_price) / item.price) * 100)}%
-              OFF
+            <span className="rounded-full bg-red-600 px-3 py-1 font-sans text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
+              {Math.round(((item.price - item.discount_price) / item.price) * 100)}% OFF
             </span>
           ) : null}
         </div>
 
-        {(item.is_veg_nonveg_applicable !== 0 && item.is_veg_nonveg_applicable !== "0" && (item.is_veg === "Vegan" || item.is_veg === "Halal")) ? (
+        {(item.is_veg === "Vegan" || item.is_veg === "Halal") && (
           <div
-            className={`absolute right-2.5 top-2.5 grid h-6 w-6 place-items-center rounded-md border-2 bg-black/60 backdrop-blur ${
-              foodTypeMarker.borderClassName
-            }`}
-            title={foodTypeMarker.label}
-            aria-label={foodTypeMarker.label}
+            className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full border border-white/20 bg-black/40 backdrop-blur-md"
+            title={item.is_veg}
           >
-            <div className={`h-2.5 w-2.5 rounded-full ${foodTypeMarker.dotClassName}`} />
+            <div
+              className={`h-2.5 w-2.5 rounded-full ${
+                item.is_veg === "Vegan" ? "bg-green-400" : "bg-red-400"
+              }`}
+            />
           </div>
-        ) : null}
+        )}
       </button>
 
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="m-0 text-base font-bold leading-[1.3] text-white">
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <h3 className="m-0 font-serif text-xl font-bold leading-tight text-white">
           {item.item_name}
         </h3>
 
         {item.item_description ? (
-          <p className="m-0 overflow-hidden text-[13px] leading-[1.5] text-white/45 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+          <p className="m-0 overflow-hidden font-sans text-sm font-light leading-relaxed text-white/60 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
             {item.item_description}
           </p>
         ) : null}
 
         {item.preparation_time ? (
-          <div className="flex items-center gap-1 text-xs text-white/40">
+          <div className="flex items-center gap-1.5 font-sans text-xs uppercase tracking-wider text-white/40">
             <span>⏱️</span>
-            <span>{item.preparation_time} min</span>
+            <span>{item.preparation_time} min prep</span>
           </div>
         ) : null}
 
         <button
           onClick={() => onOpenAddons(item)}
-          className="self-start border-0 bg-transparent p-0 text-xs font-bold text-amber-300"
+          className="self-start border-0 bg-transparent p-0 font-sans text-xs font-semibold tracking-wide text-cafe-gold hover:text-white transition-colors"
         >
-          Tap image to customize
+          Customize details
         </button>
 
-        <div className="mt-auto flex items-center justify-between pt-2">
-          <div>
+        <div className="mt-auto flex items-end justify-between pt-4">
+          <div className="flex flex-col">
             {hasDiscount ? (
               <>
-                <span className="text-lg font-extrabold text-green-500">
-                  £{item.discount_price}
+                <span className="font-sans text-[13px] text-white/40 line-through">
+                  ₹{item.price}
                 </span>
-                <span className="ml-1.5 text-[13px] text-white/35 line-through">
-                  £{item.price}
+                <span className="font-serif text-2xl font-bold text-cafe-gold">
+                  ₹{item.discount_price}
                 </span>
               </>
             ) : (
-              <span className="text-lg font-extrabold text-white">£{item.price}</span>
+              <span className="font-serif text-2xl font-bold text-cafe-gold">₹{item.price}</span>
             )}
           </div>
 
           {cartQty > 0 ? (
-            <div className="flex items-center overflow-hidden rounded-xl bg-gradient-to-br from-amber-500 to-red-500">
+            <div className="flex items-center overflow-hidden rounded-full border border-cafe-gold/30 bg-[#1c1917]">
               <button
                 onClick={() => onRemoveFromCart(item.id)}
-                className="border-0 bg-transparent px-3 py-2 text-base font-bold text-white"
+                className="border-0 bg-transparent px-3 py-1.5 text-lg font-bold text-cafe-gold hover:bg-white/5 transition-colors"
               >
                 −
               </button>
-              <span className="min-w-5 text-center text-sm font-bold text-white">
+              <span className="min-w-[28px] text-center font-sans text-sm font-bold text-white">
                 {cartQty}
               </span>
               <button
                 onClick={() => onAddToCart(item)}
-                className="border-0 bg-transparent px-3 py-2 text-base font-bold text-white"
+                className="border-0 bg-transparent px-3 py-1.5 text-lg font-bold text-cafe-gold hover:bg-white/5 transition-colors"
               >
                 +
               </button>
@@ -162,7 +135,7 @@ export function ItemCard({
           ) : (
             <button
               onClick={() => onAddToCart(item)}
-              className="rounded-xl bg-gradient-to-br from-amber-500 to-red-500 px-[18px] py-2 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition-all duration-200 hover:shadow-lg"
+              className="rounded-full bg-cafe-gold px-5 py-2 font-sans text-sm font-bold tracking-wide text-[#110e0d] transition-transform hover:scale-105"
             >
               ADD
             </button>
@@ -182,6 +155,7 @@ function ItemGrid({
   onRemoveFromCart,
   sentinelRef,
   isFetchingMore,
+  searchQuery = "",
 }) {
   if (loading) {
     return (
@@ -201,7 +175,7 @@ function ItemGrid({
       <div className="flex flex-col items-center justify-center gap-3 px-6 py-[60px]">
         <div className="text-5xl">🍽️</div>
         <p className="m-0 text-base text-white/40">
-          No items available in this category
+          {searchQuery ? `No items found matching "${searchQuery}"` : "No items available in this category"}
         </p>
       </div>
     );

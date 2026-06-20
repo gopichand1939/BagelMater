@@ -1,11 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply m-0 bg-[#0f0c29] text-white antialiased;
-    font-family: "Plus Jakarta Sans", "Outfit", "Inter", sans-serif;
+    @apply m-0 bg-cafe-bg font-sans text-cafe-cream antialiased selection:bg-cafe-gold/30 selection:text-cafe-cream;
   }
 
   #root {
@@ -14,7 +15,6 @@
 
   * {
     @apply box-border;
-    font-family: "Plus Jakarta Sans", "Outfit", "Inter", sans-serif;
   }
 
   button,
@@ -23,54 +23,71 @@
   select {
     font: inherit;
   }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-cafe-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-white/10 hover:bg-white/20;
+  }
 }
 
 @layer components {
   .customer-shell {
-    @apply min-h-screen bg-[linear-gradient(135deg,#0f0c29_0%,#1a1a2e_50%,#16213e_100%)] text-slate-200;
+    @apply min-h-screen bg-cafe-bg text-cafe-cream;
   }
 
   .customer-card {
-    @apply rounded-[18px] border border-white/10 bg-white/[0.04] p-[18px];
+    @apply rounded-2xl border border-white/5 bg-white/[0.02] p-[18px] backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04];
   }
 
   .customer-input {
-    @apply w-full rounded-[14px] border border-white/10 bg-white/[0.05] px-[14px] py-3 text-sm text-white outline-none transition focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/20 placeholder:text-white/35;
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-[16px] py-3.5 text-sm text-white outline-none transition-all duration-300 focus:border-cafe-gold/50 focus:bg-white/[0.05] focus:ring-4 focus:ring-cafe-gold/10 placeholder:text-white/30;
   }
 
   .customer-textarea {
-    @apply customer-input min-h-[96px] resize-y;
+    @apply customer-input min-h-[120px] resize-y;
   }
 
   .customer-primary-button {
-    @apply w-full rounded-[14px] border-0 bg-gradient-to-br from-amber-500 to-red-500 px-4 py-[13px] text-sm font-bold text-white shadow-warm transition-all duration-200 hover:scale-[1.01] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60;
+    @apply relative overflow-hidden rounded-full border-0 bg-cafe-gold px-6 py-3.5 text-sm font-bold text-[#110e0d] shadow-warm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-premium disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
   }
 
   .customer-secondary-button {
-    @apply rounded-[14px] border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.1];
+    @apply rounded-full border border-white/10 bg-white/[0.03] px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition-all duration-300 hover:bg-white/[0.08] hover:shadow-glow;
   }
 
   .customer-chip {
-    @apply inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white/70;
+    @apply inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-white/70 backdrop-blur-md transition-all duration-300;
   }
 
   .customer-tab-button {
-    @apply rounded-[12px] px-4 py-2 text-sm font-semibold transition-all duration-200;
+    @apply rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-300;
   }
 
   .customer-tab-button-active {
-    @apply bg-gradient-to-br from-amber-500 to-red-500 text-white shadow-warm;
+    @apply bg-cafe-gold text-[#110e0d] shadow-warm;
   }
 
   .customer-tab-button-inactive {
-    @apply bg-white/[0.05] text-white/70 hover:bg-white/[0.08] hover:text-white;
+    @apply bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white;
   }
 
   .customer-drawer-overlay {
-    @apply fixed inset-0 z-[120] bg-slate-950/70 backdrop-blur-sm animate-customer-overlay-in;
+    @apply fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm animate-customer-overlay-in;
   }
 
   .customer-drawer-panel {
-    @apply fixed right-0 top-0 z-[121] h-screen w-full max-w-[680px] overflow-y-auto border-l border-white/10 bg-[linear-gradient(180deg,#16142f_0%,#111827_100%)] p-5 shadow-2xl animate-customer-drawer-in sm:p-6;
+    @apply fixed right-0 top-0 z-[121] h-screen w-full max-w-[480px] overflow-y-auto border-l border-white/5 bg-[#110e0d]/95 p-5 shadow-premium backdrop-blur-2xl animate-customer-drawer-in sm:p-8;
   }
 }

@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
+import { X, ShoppingBag, Plus, Minus } from "lucide-react";
 import { customerAuthStorage } from "../../auth/customerAuthStorage";
 import { getImageUrl } from "../../Utils/imageUrl";
 import { placeCustomerOrder } from "../../services/orderApi";
-import {
-  createCustomerCheckoutSession,
-} from "../../services/paymentApi";
+import { createCustomerCheckoutSession } from "../../services/paymentApi";
 import {
   STRIPE_MIN_INR_AMOUNT,
   STRIPE_PUBLISHABLE_KEY,
-  DELIVERY_CHARGES_CONFIG,
 } from "../../Utils/Constant";
 import { getStripeClient } from "../../Utils/stripeClient";
-import { checkSignupEligibility } from "../../services/customerAuthApi";
+import { isRestaurantOpen } from "../../Utils/restaurantLogic";
 
 function CartDrawer({
   cart,
@@ -22,6 +20,7 @@ function CartDrawer({
   onClearCart,
   onRequireSignIn,
   onOrderPlaced,
+  restaurantSettings,
 }) {
   const [deliveryForm, setDeliveryForm] = useState({
     recipient_name: customer?.name || "",
@@ -39,80 +38,10 @@ function CartDrawer({
   const [successMessage, setSuccessMessage] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash_on_delivery");
   const [stripeLoading, setStripeLoading] = useState(false);
-  const [deliverySettings, setDeliverySettings] = useState({
-    base_charge: 30,
-    charge_per_km: 10,
-    free_delivery_threshold: 500,
-  });
-  const [isNewUserPromoEligible, setIsNewUserPromoEligible] = useState(false);
-  const [distance, setDistance] = useState(0);
-  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
+  const [orderType, setOrderType] = useState("collection");
+  const [scheduledTime, setScheduledTime] = useState("");
 
-  // Fetch delivery charges settings on mount
-  useEffect(() => {
-    const fetchDeliverySettings = async () => {
-      try {
-        const res = await fetch(DELIVERY_CHARGES_CONFIG);
-        const data = await res.json();
-        if (data.success && data.data) {
-          setDeliverySettings({
-            base_charge: Number(data.data.base_charge),
-            charge_per_km: Number(data.data.charge_per_km),
-            free_delivery_threshold: Number(data.data.free_delivery_threshold),
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching delivery charges settings:", error);
-      }
-    };
-    fetchDeliverySettings();
-  }, []);
-
-  // Check if user is eligible for welcome promotion
-  useEffect(() => {
-    const checkPromo = async () => {
-      if (customer && customer.email) {
-        try {
-          const data = await checkSignupEligibility(customer.email);
-          if (data && data.eligible) {
-            setIsNewUserPromoEligible(true);
-          } else {
-            setIsNewUserPromoEligible(false);
-          }
-        } catch (error) {
-          console.error("Error checking promo eligibility:", error);
-        }
-      } else {
-        setIsNewUserPromoEligible(false);
-      }
-    };
-    checkPromo();
-  }, [customer]);
-
-  // Simulate distance calculation dynamically based on pincode
-  useEffect(() => {
-    const pin = deliveryForm.pincode.trim();
-    if (pin.length >= 3) {
-      setIsCalculatingDistance(true);
-      const timer = setTimeout(() => {
-        // Simple deterministic hash based on pincode
-        let hash = 0;
-        for (let i = 0; i < pin.length; i++) {
-          hash = pin.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const min = 2.0;
-        const max = 8.0;
-        const range = max - min;
-        const seed = Math.abs(hash) % 100;
-        const calculatedDistance = Math.round((min + (seed / 99) * range) * 10) / 10;
-        setDistance(calculatedDistance);
-        setIsCalculatingDistance(false);
-      }, 400); // Visual delay for realistic calculation
-      return () => clearTimeout(timer);
-    } else {
-      setDistance(0);
-    }
-  }, [deliveryForm.pincode]);
+  const cafeOpen = isRestaurantOpen(restaurantSettings);
 
   useEffect(() => {
     setDeliveryForm((prev) => ({
@@ -122,7 +51,7 @@ function CartDrawer({
     }));
   }, [customer]);
 
-  const cartSubtotal = cart.reduce((sum, item) => {
+  const total = cart.reduce((sum, item) => {
     const price =
       item.discount_price && item.discount_price < item.price
         ? item.discount_price
@@ -131,29 +60,18 @@ function CartDrawer({
     return sum + (Number(price) + Number(item.addon_total || 0)) * item.qty;
   }, 0);
 
-  const total = cartSubtotal; // keep total for backward compatibility
-
-  let deliveryFee = 0;
-  if (distance > 0) {
-    deliveryFee = Number(deliverySettings.base_charge) + (distance * Number(deliverySettings.charge_per_km));
-  }
-
-  const isFreeDeliveryByThreshold = cartSubtotal >= Number(deliverySettings.free_delivery_threshold);
-  const isFreeDeliveryByPromo = isNewUserPromoEligible;
-  const isFreeDelivery = isFreeDeliveryByThreshold || isFreeDeliveryByPromo;
-  const finalDeliveryFee = isFreeDelivery ? 0 : deliveryFee;
-  const grandTotal = cartSubtotal + finalDeliveryFee;
-
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  const isStripeAmountAllowed = grandTotal >= STRIPE_MIN_INR_AMOUNT;
+  const isStripeAmountAllowed = total >= STRIPE_MIN_INR_AMOUNT;
   const isStripeOptionDisabled =
     !STRIPE_PUBLISHABLE_KEY || !isStripeAmountAllowed;
 
   useEffect(() => {
-    if (paymentMethod === "stripe" && isStripeOptionDisabled) {
+    if (orderType === "delivery" && paymentMethod === "cash_on_delivery") {
+      setPaymentMethod("stripe"); // Force stripe for delivery
+    } else if (paymentMethod === "stripe" && isStripeOptionDisabled) {
       setPaymentMethod("cash_on_delivery");
     }
-  }, [isStripeOptionDisabled, paymentMethod]);
+  }, [isStripeOptionDisabled, paymentMethod, orderType]);
 
   const handleFieldChange = (field, value) => {
     setDeliveryForm((prev) => ({
@@ -175,13 +93,20 @@ function CartDrawer({
       return;
     }
 
+    if (!cafeOpen && !scheduledTime) {
+      setErrorMessage("The cafe is currently closed. Please select a future time slot for a scheduled order.");
+      setSuccessMessage("");
+      return;
+    }
+
     if (
-      !deliveryForm.line1.trim() ||
-      !deliveryForm.city.trim() ||
-      !deliveryForm.pincode.trim()
+      orderType === "delivery" &&
+      (!deliveryForm.line1.trim() ||
+        !deliveryForm.city.trim() ||
+        !deliveryForm.pincode.trim())
     ) {
       setErrorMessage(
-        "Please add address line 1, city, and pincode before placing the order."
+        "Please add address line 1, city, and pincode for delivery."
       );
       setSuccessMessage("");
       return;
@@ -211,12 +136,12 @@ function CartDrawer({
         items: cart.map((item) => ({
           item_id: item.id,
           quantity: item.qty,
-          addons: (item.selected_addons || []).map((addon) => ({
-            addonOptionId: addon.addonOptionId ?? addon.id,
-          })),
+          selected_addons: item.selected_addons || [],
           item_notes: item.item_notes || "",
         })),
-        delivery_address: {
+        order_type: orderType,
+        scheduled_time: scheduledTime || null,
+        delivery_address: orderType === "delivery" ? {
           recipient_name: deliveryForm.recipient_name.trim(),
           phone: deliveryForm.phone.trim(),
           line1: deliveryForm.line1.trim(),
@@ -225,10 +150,8 @@ function CartDrawer({
           city: deliveryForm.city.trim(),
           state: deliveryForm.state.trim(),
           pincode: deliveryForm.pincode.trim(),
-          distance: distance,
-        },
+        } : null,
         order_notes: orderNotes.trim(),
-        delivery_fee: finalDeliveryFee,
       };
 
       if (paymentMethod === "stripe") {
@@ -300,32 +223,32 @@ function CartDrawer({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm animate-customer-overlay-in"
+        className="customer-drawer-overlay"
       />
 
-      <div className="fixed inset-y-0 right-0 z-[201] flex w-[min(420px,92vw)] flex-col border-l border-white/10 bg-[linear-gradient(180deg,#1a1a2e_0%,#0f0c29_100%)] animate-customer-drawer-in">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+      <div className="customer-drawer-panel flex flex-col">
+        <div className="flex items-center justify-between border-b border-white/5 pb-5">
           <div>
-            <h2 className="m-0 text-xl font-bold text-white">Your Cart</h2>
-            <p className="mt-1 text-[13px] text-white/40">
+            <h2 className="m-0 font-serif text-2xl font-bold text-white">Your Cart</h2>
+            <p className="mt-1 font-sans text-[13px] font-medium text-cafe-gold">
               {totalItems} {totalItems === 1 ? "item" : "items"}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border-0 bg-white/10 text-lg text-white transition hover:bg-white/15"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-cafe-gold hover:text-[#110e0d]"
           >
-            x
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-6 py-4">
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {cart.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3">
-              <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[20px] bg-white/10 font-extrabold text-white">
-                Cart
+            <div className="flex flex-1 flex-col items-center justify-center gap-4">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/5 text-white/20">
+                <ShoppingBag className="h-8 w-8" />
               </div>
-              <p className="m-0 text-[15px] text-white/40">
+              <p className="m-0 font-sans text-sm font-medium text-white/40">
                 Your cart is empty
               </p>
             </div>
@@ -342,133 +265,182 @@ function CartDrawer({
                 return (
                   <div
                     key={item.cart_key || item.id}
-                    className="flex items-start gap-3.5 rounded-[14px] border border-white/10 bg-white/[0.04] p-[14px]"
+                    className="customer-card flex items-start gap-4 p-4"
                   >
                     {getImageUrl(item, "item_image") ? (
                       <img
                         src={getImageUrl(item, "item_image")}
                         alt={item.item_name}
-                        className="h-14 w-14 flex-shrink-0 rounded-[10px] object-cover"
+                        className="h-16 w-16 flex-shrink-0 rounded-xl object-cover"
                       />
                     ) : (
-                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-2xl font-extrabold text-white">
-                        F
+                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-white/5 text-2xl">
+                        ☕
                       </div>
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <h4 className="m-0 truncate text-sm font-semibold text-white">
+                      <h4 className="m-0 truncate font-serif text-base font-bold text-white">
                         {item.item_name}
                       </h4>
                       {item.selected_addons?.length > 0 ? (
-                        <p className="mt-1.5 text-xs leading-relaxed text-white/50">
+                        <p className="mt-1 font-sans text-xs leading-relaxed text-white/50">
                           {item.selected_addons
                             .map((addon) => addon.addon_name)
                             .join(", ")}
                         </p>
                       ) : null}
-                      <p className="mt-1.5 text-sm font-bold text-amber-500">
+                      <p className="mt-2 font-serif text-[15px] font-bold text-cafe-gold">
                         Rs {linePrice.toFixed(2)}
                       </p>
                     </div>
 
-                    <div className="flex flex-shrink-0 items-center overflow-hidden rounded-[10px] bg-white/10">
+                    <div className="flex flex-shrink-0 items-center overflow-hidden rounded-full border border-cafe-gold/30 bg-[#1c1917]">
                       <button
                         onClick={() => onRemove(item.id, item.cart_key)}
-                        className="border-0 bg-transparent px-2.5 py-1.5 text-[15px] font-bold text-white"
+                        className="flex h-8 w-8 items-center justify-center border-0 bg-transparent text-cafe-gold hover:bg-white/5"
                       >
-                        -
+                        <Minus className="h-3 w-3" />
                       </button>
-                      <span className="min-w-[18px] text-center text-[13px] font-bold text-white">
+                      <span className="min-w-[20px] text-center font-sans text-[13px] font-bold text-white">
                         {item.qty}
                       </span>
                       <button
                         onClick={() => onAdd(item)}
-                        className="border-0 bg-transparent px-2.5 py-1.5 text-[15px] font-bold text-white"
+                        className="flex h-8 w-8 items-center justify-center border-0 bg-transparent text-cafe-gold hover:bg-white/5"
                       >
-                        +
+                        <Plus className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
                 );
               })}
 
-              <div className="grid gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <h3 className="m-0 text-base text-white">Delivery Details</h3>
-                <input
-                  type="text"
-                  value={deliveryForm.recipient_name}
-                  onChange={(event) =>
-                    handleFieldChange("recipient_name", event.target.value)
-                  }
-                  placeholder="Recipient name"
-                  className="customer-input"
-                />
-                <input
-                  type="tel"
-                  value={deliveryForm.phone}
-                  onChange={(event) =>
-                    handleFieldChange("phone", event.target.value)
-                  }
-                  placeholder="Phone number"
-                  className="customer-input"
-                />
-                <textarea
-                  value={deliveryForm.line1}
-                  onChange={(event) =>
-                    handleFieldChange("line1", event.target.value)
-                  }
-                  placeholder="Address line 1"
-                  rows={2}
-                  className="customer-textarea min-h-[80px]"
-                />
-                <input
-                  type="text"
-                  value={deliveryForm.line2}
-                  onChange={(event) =>
-                    handleFieldChange("line2", event.target.value)
-                  }
-                  placeholder="Address line 2"
-                  className="customer-input"
-                />
-                <input
-                  type="text"
-                  value={deliveryForm.landmark}
-                  onChange={(event) =>
-                    handleFieldChange("landmark", event.target.value)
-                  }
-                  placeholder="Landmark"
-                  className="customer-input"
-                />
-                <div className="grid grid-cols-2 gap-2.5">
-                  <input
-                    type="text"
-                    value={deliveryForm.city}
-                    onChange={(event) =>
-                      handleFieldChange("city", event.target.value)
-                    }
-                    placeholder="City"
-                    className="customer-input"
-                  />
-                  <input
-                    type="text"
-                    value={deliveryForm.state}
-                    onChange={(event) =>
-                      handleFieldChange("state", event.target.value)
-                    }
-                    placeholder="State"
-                    className="customer-input"
-                  />
+              <div className="customer-card mt-2 grid gap-3 p-5">
+                <h3 className="m-0 font-serif text-lg font-bold text-white">Order Details</h3>
+                
+                <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setOrderType("collection")}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${
+                      orderType === "collection" ? "bg-cafe-gold text-[#110e0d]" : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Collection
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderType("delivery")}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${
+                      orderType === "delivery" ? "bg-cafe-gold text-[#110e0d]" : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Delivery
+                  </button>
                 </div>
+
+                {!cafeOpen && (
+                  <div className="rounded-[12px] border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs leading-5 text-red-200 mb-2">
+                    The cafe is currently closed for immediate orders. You can schedule your order for later.
+                  </div>
+                )}
+
+                <label className="text-sm font-semibold text-white/80 mt-2 block">
+                  Scheduled Time (Optional)
+                </label>
                 <input
-                  type="text"
-                  value={deliveryForm.pincode}
-                  onChange={(event) =>
-                    handleFieldChange("pincode", event.target.value)
-                  }
-                  placeholder="Pincode"
+                  type="datetime-local"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
                   className="customer-input"
                 />
+
+                {orderType === "delivery" ? (
+                  <>
+                    <label className="text-sm font-semibold text-white/80 mt-4 block">
+                      Delivery Address
+                    </label>
+                    <input
+                      type="text"
+                      value={deliveryForm.recipient_name}
+                      onChange={(event) =>
+                        handleFieldChange("recipient_name", event.target.value)
+                      }
+                      placeholder="Recipient name"
+                      className="customer-input"
+                    />
+                    <input
+                      type="tel"
+                      value={deliveryForm.phone}
+                      onChange={(event) =>
+                        handleFieldChange("phone", event.target.value)
+                      }
+                      placeholder="Phone number"
+                      className="customer-input"
+                    />
+                    <textarea
+                      value={deliveryForm.line1}
+                      onChange={(event) =>
+                        handleFieldChange("line1", event.target.value)
+                      }
+                      placeholder="Address line 1 *"
+                      rows={2}
+                      className="customer-textarea min-h-[80px]"
+                    />
+                    <input
+                      type="text"
+                      value={deliveryForm.line2}
+                      onChange={(event) =>
+                        handleFieldChange("line2", event.target.value)
+                      }
+                      placeholder="Address line 2"
+                      className="customer-input"
+                    />
+                    <input
+                      type="text"
+                      value={deliveryForm.landmark}
+                      onChange={(event) =>
+                        handleFieldChange("landmark", event.target.value)
+                      }
+                      placeholder="Landmark"
+                      className="customer-input"
+                    />
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <input
+                        type="text"
+                        value={deliveryForm.city}
+                        onChange={(event) =>
+                          handleFieldChange("city", event.target.value)
+                        }
+                        placeholder="City *"
+                        className="customer-input"
+                      />
+                      <input
+                        type="text"
+                        value={deliveryForm.state}
+                        onChange={(event) =>
+                          handleFieldChange("state", event.target.value)
+                        }
+                        placeholder="State"
+                        className="customer-input"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={deliveryForm.pincode}
+                      onChange={(event) =>
+                        handleFieldChange("pincode", event.target.value)
+                      }
+                      placeholder="Pincode *"
+                      className="customer-input"
+                    />
+                  </>
+                ) : null}
+
+                <label className="text-sm font-semibold text-white/80 mt-4 block">
+                  Order Notes
+                </label>
                 <textarea
                   value={orderNotes}
                   onChange={(event) => setOrderNotes(event.target.value)}
@@ -478,21 +450,24 @@ function CartDrawer({
                 />
               </div>
 
-              <div className="grid gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <h3 className="m-0 text-base text-white">Payment Method</h3>
-                <label className="flex cursor-pointer items-center gap-3 rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="cash_on_delivery"
-                    checked={paymentMethod === "cash_on_delivery"}
-                    onChange={() => setPaymentMethod("cash_on_delivery")}
-                  />
-                  <span>Cash on delivery</span>
-                </label>
+              <div className="customer-card grid gap-3 p-5">
+                <h3 className="m-0 font-serif text-lg font-bold text-white">Payment Method</h3>
+                
+                {orderType === "collection" ? (
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 transition-colors hover:bg-white/10">
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="cash_on_delivery"
+                      checked={paymentMethod === "cash_on_delivery"}
+                      onChange={() => setPaymentMethod("cash_on_delivery")}
+                    />
+                    <span>Pay at Collection (Cash/Card)</span>
+                  </label>
+                ) : null}
                 <label
-                  className={`flex cursor-pointer items-center gap-3 rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white ${
-                    isStripeOptionDisabled ? "cursor-not-allowed opacity-55" : ""
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 transition-colors hover:bg-white/10 ${
+                    isStripeOptionDisabled ? "cursor-not-allowed opacity-50" : ""
                   }`}
                 >
                   <input
@@ -525,43 +500,11 @@ function CartDrawer({
         </div>
 
         {cart.length > 0 ? (
-          <div className="border-t border-white/10 bg-white/[0.02] px-6 py-5">
-            <div className="mb-4 flex flex-col gap-2 border-b border-white/10 pb-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/60">Subtotal</span>
-                <span className="font-semibold text-white">Rs {cartSubtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/60">Delivery Distance</span>
-                <span className="font-semibold text-white">
-                  {isCalculatingDistance ? (
-                    <span className="text-xs text-amber-400 animate-pulse">Calculating...</span>
-                  ) : distance > 0 ? (
-                    `${distance} km`
-                  ) : (
-                    <span className="text-xs text-white/40">Enter pincode</span>
-                  )}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/60">Delivery Fee</span>
-                <span className="font-semibold">
-                  {isFreeDeliveryByPromo ? (
-                    <span className="text-emerald-400 text-xs font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">FREE (Welcome Offer)</span>
-                  ) : isFreeDeliveryByThreshold ? (
-                    <span className="text-emerald-400 text-xs font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">FREE (Order &gt; Rs {deliverySettings.free_delivery_threshold})</span>
-                  ) : distance > 0 ? (
-                    <span className="text-white">Rs {deliveryFee.toFixed(2)}</span>
-                  ) : (
-                    <span className="text-xs text-white/40">Enter pincode</span>
-                  )}
-                </span>
-              </div>
-            </div>
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-[15px] font-bold text-white">Total</span>
-              <span className="text-[22px] font-extrabold text-white">
-                Rs {grandTotal.toFixed(2)}
+          <div className="border-t border-white/5 bg-[#110e0d] pb-2 pt-5">
+            <div className="mb-5 flex items-center justify-between">
+              <span className="font-sans text-sm uppercase tracking-wider text-white/60">Total Amount</span>
+              <span className="font-serif text-[26px] font-bold text-cafe-gold">
+                Rs {total.toFixed(2)}
               </span>
             </div>
             {errorMessage ? (
@@ -577,7 +520,7 @@ function CartDrawer({
             <button
               onClick={handlePlaceOrder}
               disabled={submitting}
-              className="w-full rounded-[14px] border-0 bg-gradient-to-br from-amber-500 to-red-500 px-4 py-[14px] text-[15px] font-bold tracking-[0.5px] text-white shadow-[0_4px_20px_rgba(245,158,11,0.3)] transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+              className="customer-primary-button w-full"
             >
               {customer
                 ? submitting
@@ -587,8 +530,8 @@ function CartDrawer({
                       : "Creating Checkout..."
                     : "Placing Order..."
                   : paymentMethod === "stripe"
-                    ? "Pay on Stripe"
-                    : "Place Order"
+                    ? "Pay Securely on Stripe"
+                    : "Confirm Order"
                 : "Sign In To Order"}
             </button>
           </div>

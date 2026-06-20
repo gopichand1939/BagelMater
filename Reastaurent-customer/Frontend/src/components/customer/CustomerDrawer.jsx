@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import { customerAuthStorage } from "../../auth/customerAuthStorage";
 import {
   changeCustomerPassword,
@@ -67,29 +68,6 @@ function GuestView({ onAuthenticated }) {
     password: "",
     confirm_password: "",
   });
-  const [activePromo, setActivePromo] = useState(null);
-  const [checkedEmails, setCheckedEmails] = useState(new Set());
-
-  const handleEmailBlur = async () => {
-    const email = registerForm.email.trim();
-    if (!email || !email.includes("@") || !email.includes(".") || checkedEmails.has(email.toLowerCase())) {
-      return;
-    }
-
-    try {
-      const result = await checkSignupEligibility(email);
-      if (result && result.eligible) {
-        setActivePromo(result);
-      }
-      setCheckedEmails((prev) => {
-        const next = new Set(prev);
-        next.add(email.toLowerCase());
-        return next;
-      });
-    } catch (_error) {
-      // Fail silently to not impact signup flow
-    }
-  };
 
   const isLogin = mode === "login";
 
@@ -222,7 +200,6 @@ function GuestView({ onAuthenticated }) {
                     email: event.target.value,
                   }))
                 }
-                onBlur={handleEmailBlur}
                 placeholder="Email address"
                 className="customer-input"
                 required
@@ -280,12 +257,6 @@ function GuestView({ onAuthenticated }) {
           </button>
         </form>
       </div>
-      {activePromo && (
-        <NewUserSignupPromoModal
-          promo={activePromo}
-          onClose={() => setActivePromo(null)}
-        />
-      )}
     </div>
   );
 }
@@ -991,13 +962,13 @@ function CustomerDrawer({
   return (
     <>
       <div onClick={onClose} className="customer-drawer-overlay" />
-      <div className="fixed inset-y-0 right-0 z-[221] flex w-[min(430px,92vw)] flex-col border-l border-white/10 bg-[linear-gradient(180deg,#19162d_0%,#0f0c29_100%)] animate-customer-drawer-in">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+      <div className="customer-drawer-panel flex flex-col !z-[221]">
+        <div className="flex items-center justify-between border-b border-white/5 pb-5">
           <div>
-            <h2 className="m-0 text-[22px] font-bold text-white">
+            <h2 className="m-0 font-serif text-2xl font-bold text-white">
               {customer ? "Customer Panel" : "Customer Sign In"}
             </h2>
-            <p className="mt-2 text-[13px] text-white/55">
+            <p className="mt-2 font-sans text-[13px] text-white/55">
               {customer
                 ? "Your personal area for profile, notifications, account, orders, and address."
                 : "Sign in once and this right-side panel becomes your personal profile area."}
@@ -1005,9 +976,9 @@ function CustomerDrawer({
           </div>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-white/10 text-lg text-white transition hover:bg-white/15"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-cafe-gold hover:text-[#110e0d]"
           >
-            x
+            <X className="h-5 w-5" />
           </button>
         </div>
 

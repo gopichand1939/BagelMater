@@ -56,16 +56,21 @@ const formatJson = (value) => {
   }
 };
 
-function InfoBlock({ title, children }) {
+function InfoBlock({ title, children, icon: Icon }) {
   return (
-    <section className="rounded-[22px] border border-white/10 bg-white/[0.04] p-5">
-      <h2 className="m-0 text-lg font-extrabold text-white">{title}</h2>
-      <div className="mt-4 grid gap-3 text-sm leading-6 text-white/70">
+    <section className="customer-card">
+      <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+        {Icon && <Icon className="h-5 w-5 text-cafe-gold" />}
+        <h2 className="m-0 font-serif text-lg font-bold text-white">{title}</h2>
+      </div>
+      <div className="mt-4 grid gap-3 font-sans text-sm font-light leading-relaxed text-white/70">
         {children}
       </div>
     </section>
   );
 }
+
+import { Package, User, MapPin, CreditCard, Receipt, ChevronLeft } from "lucide-react";
 
 function OrderDetails() {
   const { id } = useParams();
@@ -113,26 +118,27 @@ function OrderDetails() {
   }, [id]);
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#111026_0%,#07051a_100%)] px-4 py-6 text-white sm:px-6">
-      <div className="mx-auto grid w-full max-w-5xl gap-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/10 bg-white/[0.04] p-5">
+    <main className="min-h-screen bg-cafe-bg px-4 pb-20 pt-28 text-white sm:px-6">
+      <div className="mx-auto grid w-full max-w-5xl gap-6">
+        <header className="customer-card flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="m-0 text-xs font-extrabold uppercase tracking-[0.16em] text-amber-300">
+            <p className="m-0 font-sans text-xs font-bold uppercase tracking-[0.2em] text-cafe-gold">
               Order Details
             </p>
-            <h1 className="m-0 mt-2 text-2xl font-extrabold sm:text-3xl">
+            <h1 className="m-0 mt-2 font-serif text-3xl font-bold sm:text-4xl">
               {order?.order_number || `Order #${id}`}
             </h1>
-            <p className="m-0 mt-2 text-sm text-white/55">
+            <p className="m-0 mt-2 font-sans text-sm font-light text-white/60">
               Full order, address, item, and payment information.
             </p>
           </div>
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-extrabold text-white transition hover:bg-white/[0.1]"
+            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 font-sans text-sm font-bold tracking-wider text-white transition-colors hover:bg-cafe-gold hover:text-[#110e0d]"
           >
-            Back
+            <ChevronLeft className="h-4 w-4" />
+            Back to Home
           </button>
         </header>
 
@@ -150,16 +156,16 @@ function OrderDetails() {
 
         {order ? (
           <>
-            <div className="grid gap-4 lg:grid-cols-3">
-              <InfoBlock title="Customer">
+            <div className="grid gap-6 lg:grid-cols-3">
+              <InfoBlock title="Customer" icon={User}>
                 <div>{order.customer_name}</div>
                 <div>{order.customer_email}</div>
                 <div>{order.customer_phone}</div>
               </InfoBlock>
 
-              <InfoBlock title="Order Status">
+              <InfoBlock title="Order Status" icon={Package}>
                 <div className="capitalize">
-                  Order: {String(order.order_status || "-").replace(/_/g, " ")}
+                  Order: <span className="font-bold text-cafe-gold">{String(order.order_status || "-").replace(/_/g, " ")}</span>
                 </div>
                 <div className="capitalize">
                   Payment: {String(order.payment_status || "-").replace(/_/g, " ")}
@@ -170,7 +176,7 @@ function OrderDetails() {
                 <div>Placed: {formatDateTime(order.created_at)}</div>
               </InfoBlock>
 
-              <InfoBlock title="Delivery Address">
+              <InfoBlock title="Delivery Address" icon={MapPin}>
                 {addressLines(order.delivery_address).length > 0 ? (
                   addressLines(order.delivery_address).map((line, index) => (
                     <div key={`${line}-${index}`}>{line}</div>
@@ -181,27 +187,29 @@ function OrderDetails() {
               </InfoBlock>
             </div>
 
-            <InfoBlock title="Items">
+            <InfoBlock title="Order Items" icon={Receipt}>
               {(order.items || []).map((item) => (
-                <div key={item.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div key={item.id} className="rounded-xl border border-white/5 bg-white/[0.02] p-4 transition-colors hover:bg-white/5">
                   <div className="flex flex-wrap justify-between gap-3">
                     <div>
-                      <div className="font-extrabold text-white">{item.item_name}</div>
-                      <div className="mt-1 text-xs text-white/50">
-                        Qty {item.quantity} x {formatCurrency(item.final_unit_price, order.currency_code)}
+                      <div className="font-serif text-lg font-bold text-white">{item.item_name}</div>
+                      <div className="mt-1 font-sans text-xs uppercase tracking-wider text-white/50">
+                        Qty {item.quantity} × {formatCurrency(item.final_unit_price, order.currency_code)}
                       </div>
                     </div>
-                    <div className="font-extrabold text-white">
+                    <div className="font-serif text-lg font-bold text-cafe-gold">
                       {formatCurrency(item.line_total, order.currency_code)}
                     </div>
                   </div>
                   {Array.isArray(item.selected_addons) && item.selected_addons.length > 0 ? (
-                    <div className="mt-2 text-xs text-white/55">
-                      Addons: {item.selected_addons.map((addon) => addon.addon_name).join(", ")}
+                    <div className="mt-2 font-sans text-xs font-light text-white/50">
+                      <span className="font-semibold">Addons:</span> {item.selected_addons.map((addon) => addon.addon_name).join(", ")}
                     </div>
                   ) : null}
                   {item.item_notes ? (
-                    <div className="mt-2 text-xs text-white/55">Note: {item.item_notes}</div>
+                    <div className="mt-2 font-sans text-xs font-light text-white/50">
+                      <span className="font-semibold">Note:</span> {item.item_notes}
+                    </div>
                   ) : null}
                 </div>
               ))}
@@ -256,28 +264,28 @@ function OrderDetails() {
               )}
             </InfoBlock>
 
-            <InfoBlock title="Bill Summary">
-              <div className="flex justify-between gap-3">
-                <span>Subtotal</span>
-                <span>{formatCurrency(order.subtotal_amount, order.currency_code)}</span>
+            <InfoBlock title="Bill Summary" icon={Receipt}>
+              <div className="flex justify-between gap-3 font-sans text-sm">
+                <span className="text-white/70">Subtotal</span>
+                <span className="font-medium text-white">{formatCurrency(order.subtotal_amount, order.currency_code)}</span>
               </div>
-              <div className="flex justify-between gap-3">
-                <span>Discount</span>
-                <span>{formatCurrency(order.discount_amount, order.currency_code)}</span>
+              <div className="flex justify-between gap-3 font-sans text-sm">
+                <span className="text-white/70">Discount</span>
+                <span className="font-medium text-green-400">{formatCurrency(order.discount_amount, order.currency_code)}</span>
               </div>
-              <div className="flex justify-between gap-3">
-                <span>Addons</span>
-                <span>{formatCurrency(order.addon_amount, order.currency_code)}</span>
+              <div className="flex justify-between gap-3 font-sans text-sm">
+                <span className="text-white/70">Addons</span>
+                <span className="font-medium text-white">{formatCurrency(order.addon_amount, order.currency_code)}</span>
               </div>
-              <div className="flex justify-between gap-3">
-                <span>Tax</span>
-                <span>{formatCurrency(order.tax_amount, order.currency_code)}</span>
+              <div className="flex justify-between gap-3 font-sans text-sm">
+                <span className="text-white/70">Tax</span>
+                <span className="font-medium text-white">{formatCurrency(order.tax_amount, order.currency_code)}</span>
               </div>
-              <div className="flex justify-between gap-3">
-                <span>Delivery</span>
-                <span>{formatCurrency(order.delivery_fee, order.currency_code)}</span>
+              <div className="flex justify-between gap-3 font-sans text-sm">
+                <span className="text-white/70">Delivery</span>
+                <span className="font-medium text-white">{formatCurrency(order.delivery_fee, order.currency_code)}</span>
               </div>
-              <div className="flex justify-between gap-3 border-t border-white/10 pt-3 text-lg font-extrabold text-white">
+              <div className="mt-2 flex justify-between gap-3 border-t border-white/10 pt-4 font-serif text-2xl font-bold text-cafe-gold">
                 <span>Total</span>
                 <span>{formatCurrency(order.total_amount, order.currency_code)}</span>
               </div>

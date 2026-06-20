@@ -1,4 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { ShoppingCart, Bell, User, Menu, Search, X } from "lucide-react";
+import clsx from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
 function Header({
   cartCount,
@@ -10,107 +17,104 @@ function Header({
   searchQuery = "",
   onSearchChange,
 }) {
-  const [hovered, setHovered] = useState(false);
-  const [customerHovered, setCustomerHovered] = useState(false);
-  const [notificationHovered, setNotificationHovered] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  const pillBaseClass =
-    "relative flex items-center gap-2 rounded-2xl border border-white/10 px-3.5 py-2.5 text-white transition-all duration-300";
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const iconButtonClass = cn(
+    "relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300",
+    scrolled
+      ? "bg-white/5 text-white hover:bg-cafe-gold hover:text-[#110e0d]"
+      : "bg-black/20 text-white backdrop-blur-md border border-white/10 hover:bg-white hover:text-[#110e0d]"
+  );
 
   return (
-    <header className="sticky top-0 z-[100] flex flex-wrap items-center justify-between gap-3.5 border-b border-white/10 bg-white/[0.04] px-4 py-3.5 backdrop-blur-xl sm:px-6">
+    <header
+      className={cn(
+        "fixed left-0 right-0 top-0 z-[100] flex items-center justify-between px-6 py-4 transition-all duration-500",
+        scrolled ? "bg-[#110e0d]/90 py-3 shadow-premium backdrop-blur-xl border-b border-white/10" : "bg-transparent py-6"
+      )}
+    >
+      {/* Logo */}
       <div className="flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-amber-500 to-red-500 text-xl font-extrabold text-white">
-          F
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cafe-gold text-2xl font-serif font-bold text-[#110e0d]">
+          B
         </div>
-        <div>
-          <h1 className="m-0 bg-gradient-to-r from-amber-500 to-red-500 bg-clip-text text-xl font-bold tracking-[-0.5px] text-transparent">
-            Flavour Hub
+        <div className="hidden sm:block">
+          <h1 className="m-0 font-serif text-2xl font-bold tracking-tight text-white">
+            Bagel Cafe
           </h1>
-          <p className="m-0 text-[11px] uppercase tracking-[2px] text-white/40">
-            Delicious meals delivered
-          </p>
         </div>
       </div>
 
-      {onSearchChange !== undefined && (
-        <div className="order-3 w-full md:order-none md:flex-1 md:max-w-md lg:max-w-lg">
-          <div className="relative flex items-center rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-white/70 transition-all duration-300 focus-within:border-amber-500/50 focus-within:bg-white/[0.1] focus-within:shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-            <span className="mr-2 text-white/40">🔍</span>
-            <input
-              type="text"
-              placeholder="Search for delicious dishes, categories..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full border-0 bg-transparent text-sm text-white placeholder-white/30 outline-none"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => onSearchChange("")}
-                className="border-0 bg-transparent px-1 text-xs text-white/40 transition-colors hover:text-white"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+      {/* Search Input (Swiggy-style) */}
+      <div className="flex-1 max-w-[200px] sm:max-w-[280px] md:max-w-[320px] mx-2 sm:mx-4 md:mx-6 relative">
+        <div className="relative font-sans">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search for bagels, coffee..."
+            className="w-full h-10 pl-9 pr-9 rounded-full border bg-white/5 border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cafe-gold focus:bg-white/10 transition-all placeholder-white/40"
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange("")}
+              type="button"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-0.5 rounded-full hover:bg-white/10 border-0 bg-transparent flex items-center justify-center cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* Center Nav (Hidden on Mobile or when searching) */}
+      {!searchQuery && (
+        <nav className="hidden lg:flex items-center gap-8 font-sans text-sm font-semibold uppercase tracking-widest text-white/80">
+          <button onClick={() => document.getElementById("menu-section")?.scrollIntoView({ behavior: "smooth" })} className="transition-colors hover:text-cafe-gold">Menu</button>
+          <button onClick={() => document.getElementById("about-section")?.scrollIntoView({ behavior: "smooth" })} className="transition-colors hover:text-cafe-gold">About Us</button>
+          <button onClick={() => document.getElementById("gallery-section")?.scrollIntoView({ behavior: "smooth" })} className="transition-colors hover:text-cafe-gold">Gallery</button>
+          <button onClick={() => document.getElementById("footer-section")?.scrollIntoView({ behavior: "smooth" })} className="transition-colors hover:text-cafe-gold">Contact Us</button>
+        </nav>
       )}
 
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onCustomerClick}
-          onMouseEnter={() => setCustomerHovered(true)}
-          onMouseLeave={() => setCustomerHovered(false)}
-          className={`${pillBaseClass} max-w-[220px] ${
-            customerHovered
-              ? "bg-gradient-to-br from-amber-500/95 to-red-500/90 shadow-warm"
-              : "bg-white/[0.08]"
-          }`}
-        >
-          <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-xl bg-white/15 font-extrabold text-white">
-            {customer?.name ? customer.name.slice(0, 1).toUpperCase() : "U"}
-          </span>
-          <span className="truncate text-sm font-semibold">
-            {customer?.name || "Sign In"}
-          </span>
+      {/* Actions */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* User */}
+        <button onClick={onCustomerClick} className={iconButtonClass}>
+          {customer?.name ? (
+            <span className="font-sans text-lg font-bold">{customer.name.charAt(0).toUpperCase()}</span>
+          ) : (
+            <User className="h-5 w-5" />
+          )}
         </button>
 
-        <button
-          onClick={onNotificationClick}
-          onMouseEnter={() => setNotificationHovered(true)}
-          onMouseLeave={() => setNotificationHovered(false)}
-          className={`${pillBaseClass} ${
-            notificationHovered
-              ? "bg-gradient-to-br from-amber-500/95 to-red-500/90 shadow-warm"
-              : "bg-white/[0.08]"
-          }`}
-        >
-          <span className="text-[15px]">N</span>
-          <span className="text-sm font-semibold">Alerts</span>
-          {notificationCount > 0 ? (
-            <span className="absolute -right-1.5 -top-1.5 flex min-h-[22px] min-w-[22px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.5)]">
+        {/* Notifications */}
+        <button onClick={onNotificationClick} className={iconButtonClass}>
+          <Bell className="h-5 w-5" />
+          {notificationCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 font-sans text-[10px] font-bold text-white shadow-lg">
               {notificationCount > 99 ? "99+" : notificationCount}
             </span>
-          ) : null}
+          )}
         </button>
 
-        <button
-          onClick={onCartClick}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          className={`${pillBaseClass} px-4 ${
-            hovered
-              ? "bg-gradient-to-br from-amber-500 to-red-500 shadow-warm"
-              : "bg-white/[0.08]"
-          }`}
-        >
-          <span className="text-[15px]">C</span>
-          <span className="text-sm font-semibold">Cart</span>
-          {cartCount > 0 ? (
-            <span className="absolute -right-1.5 -top-1.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.5)]">
+        {/* Cart */}
+        <button onClick={onCartClick} className={iconButtonClass}>
+          <ShoppingCart className="h-5 w-5" />
+          {cartCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-cafe-gold font-sans text-[10px] font-bold text-[#110e0d] shadow-lg">
               {cartCount}
             </span>
-          ) : null}
+          )}
         </button>
       </div>
     </header>

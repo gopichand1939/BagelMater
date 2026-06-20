@@ -33,30 +33,32 @@ function CategoryBar({ categories, selectedCategory, onSelect, loading }) {
               onClick={() => onSelect(cat.id)}
               onMouseEnter={() => setHoveredId(cat.id)}
               onMouseLeave={() => setHoveredId(null)}
-              className={`flex min-w-[110px] flex-shrink-0 scale-100 cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 px-3 py-3.5 transition-all duration-300 ${
+              className={`flex min-w-[120px] flex-shrink-0 cursor-pointer flex-col items-center gap-3 rounded-3xl border border-white/5 p-4 transition-all duration-300 ${
                 isSelected
-                  ? "scale-105 border-amber-500 bg-gradient-to-br from-amber-500/20 to-red-500/15 shadow-[0_4px_20px_rgba(245,158,11,0.2)]"
+                  ? "bg-cafe-gold text-[#110e0d] shadow-warm scale-[1.02]"
                   : isHovered
-                    ? "scale-[1.02] border-white/10 bg-white/[0.08]"
-                    : "border-white/10 bg-white/[0.04]"
+                    ? "bg-white/[0.08] text-white border-white/20"
+                    : "bg-white/[0.02] text-white/60"
               }`}
             >
               {getImageUrl(cat, "category_image") ? (
-                <img
-                  src={getImageUrl(cat, "category_image")}
-                  alt={cat.category_name}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-12 w-12 rounded-xl object-cover"
-                />
+                <div className="overflow-hidden rounded-full h-14 w-14 border border-white/10 p-0.5">
+                  <img
+                    src={getImageUrl(cat, "category_image")}
+                    alt={cat.category_name}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                </div>
               ) : (
-                <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-amber-500 to-red-500 text-[22px]">
-                  🍴
+                <div className={`grid h-14 w-14 place-items-center rounded-full border border-white/10 text-2xl ${isSelected ? "bg-[#110e0d]/10" : "bg-white/5"}`}>
+                  ☕
                 </div>
               )}
               <span
-                className={`max-w-[90px] truncate text-center text-xs ${
-                  isSelected ? "font-bold text-amber-400" : "font-medium text-white/70"
+                className={`max-w-[100px] truncate text-center font-sans text-sm tracking-wide ${
+                  isSelected ? "font-bold" : "font-medium"
                 }`}
               >
                 {cat.category_name}
