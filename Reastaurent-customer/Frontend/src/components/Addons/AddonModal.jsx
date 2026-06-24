@@ -10,10 +10,12 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
 
   const groupedAddons = useMemo(() => {
     return addons.reduce((groups, addon) => {
-      if (!groups[addon.addon_group]) {
-        groups[addon.addon_group] = [];
+      const groupName = addon.addon_group || addon.title || "Add-ons";
+
+      if (!groups[groupName]) {
+        groups[groupName] = [];
       }
-      groups[addon.addon_group].push(addon);
+      groups[groupName].push(addon);
       return groups;
     }, {});
   }, [addons]);
@@ -32,10 +34,28 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
 
   const toggleAddon = (addon) => {
     setSelectedAddons((prev) => {
-      const exists = prev.some((selected) => selected.id === addon.id);
+      const addonId = addon.addonOptionId || addon.id;
+      const groupName = addon.addon_group || addon.title || "Add-ons";
+      const maxSelect = Number(addon.max_select || 0);
+      const exists = prev.some(
+        (selected) => (selected.addonOptionId || selected.id) === addonId
+      );
+
       if (exists) {
-        return prev.filter((selected) => selected.id !== addon.id);
+        return prev.filter(
+          (selected) => (selected.addonOptionId || selected.id) !== addonId
+        );
       }
+
+      const selectedInGroup = prev.filter(
+        (selected) =>
+          (selected.addon_group || selected.title || "Add-ons") === groupName
+      ).length;
+
+      if (maxSelect > 0 && selectedInGroup >= maxSelect) {
+        return prev;
+      }
+
       return [...prev, addon];
     });
   };
@@ -122,7 +142,7 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
                         </div>
 
                         <div className="text-sm font-extrabold text-amber-300">
-                          +₹{Number(addon.addon_price || 0).toFixed(2)}
+                          +£{Number(addon.addon_price || 0).toFixed(2)}
                         </div>
                       </button>
                     );
@@ -139,7 +159,7 @@ function AddonModal({ item, addons, loading, onClose, onConfirm }) {
               Total
             </div>
             <div className="mt-1 text-[26px] font-extrabold text-white">
-              ₹{totalPrice}
+              £{totalPrice}
             </div>
           </div>
 

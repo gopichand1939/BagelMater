@@ -33,10 +33,19 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Lazy load pages
-const Home = lazy(() => import("./Pages/Home/Home"));
+// Lazy load layout and pages
+const CustomerLayout = lazy(() => import("./components/common/CustomerLayout"));
+const HomeContent = lazy(() => import("./Pages/Home/HomeContent"));
+const MenuPage = lazy(() => import("./Pages/Menu/MenuPage"));
+const AboutPage = lazy(() => import("./Pages/About/AboutPage"));
+const EventsPage = lazy(() => import("./Pages/Events/EventsPage"));
+const GalleryPage = lazy(() => import("./Pages/Gallery/GalleryPage"));
+// const ContactPage = lazy(() => import("./Pages/Contact/ContactPage"));
+const CartPage = lazy(() => import("./Pages/Cart/CartPage"));
+
 const Office = lazy(() => import("./Pages/Office/Office"));
 const OrderDetails = lazy(() => import("./Pages/OrderDetails/OrderDetails"));
+const ScrollToTop = lazy(() => import("./components/common/ScrollToTop"));
 
 const PageLoader = () => (
   <div style={{ 
@@ -57,11 +66,19 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <ErrorBoundary>
+          <ScrollToTop />
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route element={<CustomerLayout />}>
+              <Route path="/" element={<HomeContent />} />
+              <Route path="/menu" element={<MenuPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/events" element={<EventsPage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
+              {/* <Route path="/contact" element={<ContactPage />} /> */}
+              <Route path="/cart" element={<CartPage />} />
+            </Route>
             <Route path="/orders/:id" element={<OrderDetails />} />
             <Route path="/office" element={<Office />} />
-            {/* Add more routes here as needed */}
           </Routes>
         </ErrorBoundary>
       </Suspense>

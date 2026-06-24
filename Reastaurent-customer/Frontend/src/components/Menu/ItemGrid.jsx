@@ -10,6 +10,8 @@ function ItemCard({
 }) {
   const [hovered, setHovered] = useState(false);
   const hasDiscount = item.discount_price && item.discount_price < item.price;
+  const isGreen =
+  item.is_veg === "Veg" || item.is_veg === "Vegan";
 
   return (
     <div
@@ -59,58 +61,46 @@ function ItemCard({
           ) : null}
         </div>
 
-        {(item.is_veg === "Vegan" || item.is_veg === "Halal") && (
-          <div
-            className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full border border-white/20 bg-black/40 backdrop-blur-md"
-            title={item.is_veg}
-          >
-            <div
-              className={`h-2.5 w-2.5 rounded-full ${
-                item.is_veg === "Vegan" ? "bg-green-400" : "bg-red-400"
-              }`}
-            />
-          </div>
-        )}
       </button>
 
       <div className="flex flex-1 flex-col gap-3 p-5">
-        <h3 className="m-0 font-serif text-xl font-bold leading-tight text-white">
+        <h3 className=" leading-tight text-white">
           {item.item_name}
         </h3>
 
         {item.item_description ? (
-          <p className="m-0 overflow-hidden font-sans text-sm font-light leading-relaxed text-white/60 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+          <p className="m-0 overflow-hidden  text-sm font-light leading-relaxed text-white/60 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
             {item.item_description}
           </p>
         ) : null}
 
-        {item.preparation_time ? (
-          <div className="flex items-center gap-1.5 font-sans text-xs uppercase tracking-wider text-white/40">
-            <span>⏱️</span>
-            <span>{item.preparation_time} min prep</span>
-          </div>
-        ) : null}
-
-        <button
-          onClick={() => onOpenAddons(item)}
-          className="self-start border-0 bg-transparent p-0 font-sans text-xs font-semibold tracking-wide text-cafe-gold hover:text-white transition-colors"
-        >
-          Customize details
-        </button>
+{item.is_veg && item.is_veg !== "Not applicable" && (
+  <div className="mt-2">
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border ${
+        isGreen
+          ? "bg-green-500/10  border-green-500/20"
+          : "bg-red-500/10  border-red-500/20"
+      }`}
+    >
+      {item.is_veg}
+    </span>
+  </div>
+)}
 
         <div className="mt-auto flex items-end justify-between pt-4">
           <div className="flex flex-col">
             {hasDiscount ? (
               <>
-                <span className="font-sans text-[13px] text-white/40 line-through">
-                  ₹{item.price}
+                <span className=" text-[13px] text-white/40 line-through">
+                  £{item.price}
                 </span>
-                <span className="font-serif text-2xl font-bold text-cafe-gold">
-                  ₹{item.discount_price}
+                <span className=" text-2xl font-bold text-cafe-gold">
+                  £{item.discount_price}
                 </span>
               </>
             ) : (
-              <span className="font-serif text-2xl font-bold text-cafe-gold">₹{item.price}</span>
+              <span className=" text-2xl font-bold text-cafe-gold">£{item.price}</span>
             )}
           </div>
 
@@ -155,7 +145,6 @@ function ItemGrid({
   onRemoveFromCart,
   sentinelRef,
   isFetchingMore,
-  searchQuery = "",
 }) {
   if (loading) {
     return (
@@ -175,7 +164,7 @@ function ItemGrid({
       <div className="flex flex-col items-center justify-center gap-3 px-6 py-[60px]">
         <div className="text-5xl">🍽️</div>
         <p className="m-0 text-base text-white/40">
-          {searchQuery ? `No items found matching "${searchQuery}"` : "No items available in this category"}
+          No items available in this category
         </p>
       </div>
     );

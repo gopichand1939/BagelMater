@@ -1,11 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState, lazy, Suspense } from "react";
-import { Header } from "../../components/common";
-import Footer from "../../components/common/Footer";
-import { CategoryBar, ItemGrid, CategoryGrid } from "../../components/Menu";
-import Hero from "../../components/Home/Hero";
-import About from "../../components/Home/About";
-import Gallery from "../../components/Home/Gallery";
-import Testimonials from "../../components/Home/Testimonials";
+import { Outlet, useNavigate } from "react-router-dom";
+import Header from "./Header";
+import Footer from "./Footer";
 
 import {
   fetchCategories,
@@ -29,9 +25,10 @@ import {
   stopCustomerNotificationAlert,
 } from "../../Utils/notificationSound";
 
-const CartDrawer = lazy(() => import("../../components/Cart/CartDrawer"));
-const AddonModal = lazy(() => import("../../components/Addons/AddonModal"));
-const CustomerDrawer = lazy(() => import("../../components/customer/CustomerDrawer"));
+const ProductModal = lazy(() => import("../Menu/ProductModal"));
+const AuthModal = lazy(() => import("../customer/AuthModal"));
+const CustomerDashboardModal = lazy(() => import("../customer/CustomerDashboardModal"));
+const NotificationDrawer = lazy(() => import("../customer/NotificationDrawer"));
 
 function Home() {
   const [categories, setCategories] = useState([]);
@@ -40,16 +37,20 @@ function Home() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
   const [restaurantSettings, setRestaurantSettings] = useState(null);
+  const navigate = useNavigate();
   const [cart, setCart] = useState([]);
-  const [cartOpen, setCartOpen] = useState(false);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [addonCache, setAddonCache] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemAddons, setSelectedItemAddons] = useState([]);
-  const [addonModalOpen, setAddonModalOpen] = useState(false);
+  const [productModalOpen, setProductModalOpen] = useState(false);
   const [loadingAddons, setLoadingAddons] = useState(false);
-  const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false);
+  
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [dashboardModalOpen, setDashboardModalOpen] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState("profile");
+  
   const [customer, setCustomer] = useState(customerAuthStorage.getCustomer());
-  const [customerDrawerTab, setCustomerDrawerTab] = useState("profile");
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
   const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0);
   const [notificationSummary, setNotificationSummary] = useState({
@@ -222,8 +223,8 @@ function Home() {
 
         setSelectedItemAddons(cachedAddons);
 
-        if (openModal && cachedAddons.length > 0) {
-          setAddonModalOpen(true);
+        if (openModal) {
+          setProductModalOpen(true);
         }
 
         return cachedAddons;
@@ -238,7 +239,7 @@ function Home() {
       setSelectedItemAddons(addons);
 
       if (openModal) {
-        setAddonModalOpen(addons.length > 0);
+        setProductModalOpen(true);
       }
 
       return addons;
@@ -246,7 +247,7 @@ function Home() {
       console.error("Failed to fetch item addons:", error);
       setSelectedItemAddons([]);
       if (openModal) {
-        setAddonModalOpen(false);
+        setProductModalOpen(false);
       }
       return [];
     } finally {
@@ -296,7 +297,7 @@ function Home() {
           Number(payload.entityData?.is_active ?? 1) !== 1 ||
           Number(payload.entityData?.is_deleted ?? 0) !== 0)
       ) {
-        setAddonModalOpen(false);
+        setProductModalOpen(false);
         setSelectedItemAddons([]);
       }
 
@@ -388,7 +389,7 @@ function Home() {
         message: "Payment was cancelled. No online order was placed.",
         order: null,
       });
-      setCartOpen(true);
+      // setCartOpen(true);
       clearCheckoutParams();
       return;
     }
@@ -484,9 +485,8 @@ function Home() {
             targetCategory = "all";
             skipNextSelectedCategoryFetchRef.current = true;
           }
-          const menuSection = document.getElementById("menu-section");
-          if (menuSection) {
-            menuSection.scrollIntoView({ behavior: "smooth" });
+          if (window.location.pathname !== "/menu") {
+            navigate("/menu");
           }
         }
         
@@ -497,7 +497,7 @@ function Home() {
     }, 400);
 
     return () => clearTimeout(handler);
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, navigate]);
 
   useEffect(() => {
     const accessToken = customerAuthStorage.getAccessToken();
@@ -596,25 +596,48 @@ function Home() {
     });
   };
 
-  const closeAddonModal = () => {
-    setAddonModalOpen(false);
+  const closeProductModal = () => {
+    setProductModalOpen(false);
     setSelectedItem(null);
     setSelectedItemAddons([]);
     setLoadingAddons(false);
   };
 
-  const handleAddonConfirm = (selectedAddons) => {
+  const handleProductConfirm = (selectedAddons) => {
     if (selectedItem) {
-      addConfiguredItemToCart(selectedItem, selectedAddons);
+      if (selectedItem.cart_key) {
+        const oldQty = selectedItem.qty || 1;
+        setCart((prev) => {
+          const filtered = prev.filter(c => c.cart_key !== selectedItem.cart_key);
+          const addonIds = selectedAddons.map((addon) => addon.id).sort((a, b) => a - b);
+          const newCartKey = `${selectedItem.id}:${addonIds.join("-") || "base"}`;
+          const addonTotal = selectedAddons.reduce((sum, addon) => sum + Number(addon.addon_price || 0), 0);
+          
+          const existing = filtered.find(entry => entry.cart_key === newCartKey);
+          if (existing) {
+            return filtered.map(entry => 
+              entry.cart_key === newCartKey 
+                ? { ...entry, qty: entry.qty + oldQty }
+                : entry
+            );
+          }
+          
+          return [...filtered, {
+            ...selectedItem,
+            cart_key: newCartKey,
+            selected_addons: selectedAddons,
+            addon_total: addonTotal,
+            qty: oldQty
+          }];
+        });
+      } else {
+        addConfiguredItemToCart(selectedItem, selectedAddons);
+      }
     }
-    closeAddonModal();
+    closeProductModal();
   };
 
   const openAddonsForItem = async (item) => {
-    if (item.cart_key) {
-      return;
-    }
-
     setSelectedItem(item);
 
     const addons = await loadAddonsForItem(item, {
@@ -622,11 +645,7 @@ function Home() {
       openModal: false,
     });
 
-    if (addons.length > 0) {
-      setAddonModalOpen(true);
-    } else {
-      closeAddonModal();
-    }
+    setProductModalOpen(true);
   };
 
   const addToCart = (item) => {
@@ -707,8 +726,8 @@ function Home() {
                     className="rounded-2xl border-0 bg-green-500 px-4 py-3 text-sm font-extrabold text-white"
                     onClick={() => {
                       setCheckoutResult({ status: "idle", message: "", order: null });
-                      setCustomerDrawerTab("orders");
-                      setCustomerDrawerOpen(true);
+                      setDashboardTab("orders");
+                      setDashboardModalOpen(true);
                     }}
                   >
                     View Order
@@ -735,107 +754,104 @@ function Home() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onCustomerClick={() => {
-          setCartOpen(false);
-          setCustomerDrawerTab("profile");
-          setCustomerDrawerOpen(true);
+          if (!customer) {
+            setAuthModalOpen(true);
+          } else {
+            setDashboardTab("profile");
+            setDashboardModalOpen(true);
+          }
+        }}
+        onDropdownClick={(tab) => {
+          setDashboardTab(tab);
+          setDashboardModalOpen(true);
+        }}
+        onLogoutClick={async () => {
+          try {
+            const accessToken = customerAuthStorage.getAccessToken();
+            if (accessToken) await import("../../services/customerAuthApi").then(m => m.logoutCustomer(accessToken));
+          } catch (e) {} finally {
+            customerAuthStorage.clearSession();
+            setCustomer(null);
+          }
         }}
         onNotificationClick={() => {
-          setCartOpen(false);
-          setCustomerDrawerTab("notifications");
           stopCustomerNotificationAlert();
-          setCustomerDrawerOpen(true);
+          setNotificationDrawerOpen(true);
         }}
         onCartClick={() => {
-          setCustomerDrawerOpen(false);
-          setCartOpen(true);
+          navigate("/cart");
         }}
       />
-      <Hero />
-      <div id="menu-section" className="scroll-mt-24 pb-16">
-        {!selectedCategory ? (
-          <CategoryGrid
-            categories={categories}
-            onSelect={setSelectedCategory}
-            loading={loadingCategories}
-          />
-        ) : (
-          <>
-            <div className="flex items-center justify-between px-4 pt-5 sm:px-6">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 font-sans text-sm font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                ← Back to Categories
-              </button>
-            </div>
-            <CategoryBar
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelect={setSelectedCategory}
-              loading={loadingCategories}
-            />
-            <ItemGrid
-              items={items}
-              loading={loadingItems}
-              onAddToCart={addToCart}
-              onOpenAddons={openAddonsForItem}
-              cart={cart}
-              onRemoveFromCart={removeFromCart}
-              sentinelRef={sentinelRef}
-              isFetchingMore={isFetchingMore}
-            />
-          </>
-        )}
-      </div>
-      <About />
-      <Gallery />
-      <Testimonials />
+      <main className="flex-1 w-full flex flex-col min-h-[calc(100vh-80px)]">
+        <Outlet 
+          context={{
+            categories,
+            selectedCategory,
+            setSelectedCategory,
+            loadingCategories,
+            items,
+            loadingItems,
+            addToCart,
+            openAddonsForItem,
+            cart,
+            removeFromCart,
+            sentinelRef,
+            isFetchingMore,
+            customer,
+            restaurantSettings,
+            clearCart: () => setCart([]),
+            setOrdersRefreshKey,
+            openCustomerDashboard: (tab) => {
+              setDashboardTab(tab);
+              setDashboardModalOpen(true);
+            }
+          }}
+        />
+      </main>
       <Footer />
       <Suspense fallback={null}>
-        {cartOpen ? (
-          <CartDrawer
-            cart={cart}
-            customer={customer}
-            restaurantSettings={restaurantSettings}
-            onClose={() => setCartOpen(false)}
-            onAdd={addToCart}
-            onRemove={removeFromCart}
-            onClearCart={() => setCart([])}
-            onRequireSignIn={() => {
-              setCartOpen(false);
-              setCustomerDrawerTab("profile");
-              setCustomerDrawerOpen(true);
-            }}
-            onOrderPlaced={() => {
-              setOrdersRefreshKey((prev) => prev + 1);
-              setCartOpen(false);
-              setCustomerDrawerTab("orders");
-              setCustomerDrawerOpen(true);
-            }}
-          />
-        ) : null}
-      </Suspense>
-      <Suspense fallback={null}>
-        <CustomerDrawer
-          open={customerDrawerOpen}
-          onClose={() => setCustomerDrawerOpen(false)}
-          customer={customer}
-          onCustomerChange={setCustomer}
-          initialTab={customerDrawerTab}
-          ordersRefreshKey={ordersRefreshKey}
+        <NotificationDrawer
+          open={notificationDrawerOpen}
+          onClose={() => setNotificationDrawerOpen(false)}
           notificationsRefreshKey={notificationsRefreshKey}
-          notificationSummary={notificationSummary}
           onNotificationSummaryChange={setNotificationSummary}
         />
       </Suspense>
       <Suspense fallback={null}>
-        {addonModalOpen && selectedItem ? (
-          <AddonModal
+        <AuthModal
+          open={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          onAuthenticated={(customerData) => {
+            setCustomer(customerData);
+            import("../../services/customerProfileApi").then(async (m) => {
+              try {
+                const fresh = await m.fetchCustomerProfile(customerAuthStorage.getAccessToken());
+                customerAuthStorage.updateCustomer(fresh);
+                setCustomer(fresh);
+              } catch(e) {}
+            });
+          }}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <CustomerDashboardModal
+          open={dashboardModalOpen}
+          onClose={() => setDashboardModalOpen(false)}
+          customer={customer}
+          onCustomerChange={setCustomer}
+          initialTab={dashboardTab}
+          ordersRefreshKey={ordersRefreshKey}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        {productModalOpen && selectedItem ? (
+          <ProductModal
             item={selectedItem}
             addons={selectedItemAddons}
             loading={loadingAddons}
-            onClose={closeAddonModal}
-            onConfirm={handleAddonConfirm}
+            onClose={closeProductModal}
+            onConfirm={handleProductConfirm}
+            initialSelectedAddons={selectedItem.selected_addons || []}
           />
         ) : null}
       </Suspense>

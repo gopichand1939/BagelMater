@@ -1,80 +1,239 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom"; 
+
+import turkeyReuben from "../../assets/turkey-reuben.png";
+import falafelWrap from "../../assets/falafel-wrap.png";
+import chickenBagel from "../../assets/chicken-salad-bagel.png";
+import blueberryFrappe from "../../assets/blueberry-frappe.png";
+// import caramelCoffee from "../../assets/caramel-coffee.png";
+// import orangeJuice from "../../assets/orange-juice.png";
 
 export default function Hero() {
+  const navigate = useNavigate();
   return (
-    <section className="relative h-screen min-h-[600px] w-full overflow-hidden flex items-center justify-center">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=2071&auto=format&fit=crop')"
-        }}
-      >
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#110e0d]/80 via-[#110e0d]/50 to-cafe-bg" />
+<section className="relative h-screen min-h-[550px] overflow-hidden bg-[#0F0B08] flex items-center justify-center">
+
+  <div className="absolute inset-0 overflow-hidden">
+
+  <div
+    className="
+    absolute
+    left-1/2
+    top-1/2
+    h-[900px]
+    w-[900px]
+    -translate-x-1/2
+    -translate-y-1/2
+    rounded-full
+    bg-[#D4B483]/8
+    blur-[220px]
+    "
+  />
+
+</div>
+
+  {/* Background Text */}
+  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <h2 className="text-[18rem] font-black uppercase text-white/[0.015] leading-none">
+      BAGELS
+    </h2>
+  </div>
+
+  {/* Golden Glow */}
+  <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#D4B483]/10 blur-[180px]" />
+
+  {/* ================= LEFT SIDE ================= */}
+
+  {/* Turkey Reuben */}
+{/* <motion.div
+  animate={{ y: [0, -12, 0] }}
+  transition={{ repeat: Infinity, duration: 5 }}
+  className="absolute top-20 left-12 hidden xl:block z-20"
+>
+
+  <div className="absolute inset-0 rounded-full bg-[#D4B483]/10 blur-3xl" />
+
+  <img
+    src={turkeyReuben}
+    alt=""
+    className="
+    relative
+    w-[360px]
+    rotate-[-3deg]
+    drop-shadow-[0_30px_60px_rgba(0,0,0,0.45)]
+    "
+  />
+
+</motion.div> */}
+
+  {/* Falafel Wrap */}
+{/* <motion.div
+  animate={{ y: [0, 10, 0] }}
+  transition={{ repeat: Infinity, duration: 6 }}
+  className="absolute left-10 top-[62%] hidden xl:block z-20"
+>
+  <div className="absolute inset-0 rounded-full bg-[#D4B483]/10 blur-3xl" />
+
+  <img
+    src={falafelWrap}
+    alt=""
+    className="
+    w-[230px]
+    rotate-[2deg]
+    drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]
+    "
+  />
+</motion.div> */}
+
+  {/* Caramel Coffee */}
+  {/* <motion.div
+    animate={{ y: [0, -10, 0] }}
+    transition={{ repeat: Infinity, duration: 4 }}
+    className="absolute bottom-10 left-20 hidden xl:block z-20"
+  >
+    <img
+      src={caramelCoffee}
+      alt=""
+      className="w-[160px] drop-shadow-2xl"
+    />
+  </motion.div> */}
+
+  {/* ================= RIGHT SIDE ================= */}
+
+  {/* Blueberry Frappe */}
+{/* <motion.div
+  animate={{ y: [0, -12, 0] }}
+  transition={{ repeat: Infinity, duration: 5 }}
+  className="absolute right-20 top-[120px] hidden xl:block z-20"
+>
+  <div className="absolute inset-0 rounded-full bg-[#D4B483]/10 blur-3xl" />
+
+  <img
+    src={blueberryFrappe}
+    alt=""
+    className="
+    w-[190px]
+    rotate-[3deg]
+    drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]
+    "
+  />
+</motion.div> */}
+
+  {/* Chicken Bagel */}
+{/* <motion.div
+  animate={{ y: [0, 12, 0] }}
+  transition={{ repeat: Infinity, duration: 6 }}
+  className="absolute right-10 top-[60%] hidden xl:block z-20"
+>
+  <div className="absolute inset-0 rounded-full bg-[#D4B483]/10 blur-3xl" />
+
+  <img
+    src={chickenBagel}
+    alt=""
+    className="
+    w-[260px]
+    rotate-[-2deg]
+    drop-shadow-[0_25px_50px_rgba(0,0,0,0.4)]
+    "
+  />
+</motion.div> */}
+
+  {/* Orange Juice */}
+  {/* <motion.div
+    animate={{ y: [0, -10, 0] }}
+    transition={{ repeat: Infinity, duration: 4 }}
+    className="absolute bottom-10 right-20 hidden xl:block z-20"
+  >
+    <img
+      src={orangeJuice}
+      alt=""
+      className="w-[160px] drop-shadow-2xl"
+    />
+  </motion.div> */}
+
+  {/* ================= CENTER CONTENT ================= */}
+
+<div className="relative z-30 max-w-[850px] px-6 text-center">
+
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+    >
+
+     <span className="tracking-[0.25em] uppercase text-[#D4B483] text-sm">
+       The Art of 
+      </span>
+
+      <h1 className="mt-6 mb-8 text-white text-7xl md:text-8xl lg:text-[6rem] font-serif font-bold leading-[0.9]">
+        Bagel Master
+      </h1>
+      <div className="mx-auto mb-8 h-[1px] w-40 bg-gradient-to-r from-transparent via-[#D4B483] to-transparent" />
+
+     <div className="mb-8 tracking-[0.4em] uppercase text-[#D4B483] text-sm font-semibold">
+        Artisan Coffee • Fresh Bagels
       </div>
 
-      <div className="relative z-10 w-full max-w-[1200px] px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <span className="mb-4 inline-block font-sans text-sm font-bold uppercase tracking-[0.2em] text-cafe-gold">
-            Premium Roasters & Bakers
-          </span>
-          <h1 className="mb-6 font-serif text-5xl font-bold leading-tight text-white sm:text-6xl md:text-7xl lg:text-8xl">
-            The Art of <br />
-            <span className="italic text-cafe-cream/90">Coffee & Bagels</span>
-          </h1>
-        </motion.div>
+      <p className="mx-auto max-w-2xl text-xl text-white/75 leading-relaxed">
+        Freshly baked artisan bagels and expertly crafted coffee,
+        served daily in a warm and welcoming atmosphere.
+      </p>
+    </motion.div>
 
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-          className="mx-auto mb-10 max-w-2xl font-sans text-lg font-light text-white/80 md:text-xl"
-        >
-          Experience the perfect blend of artisanal bagels baked fresh daily and ethically sourced coffee roasted to perfection.
-        </motion.p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      className="mt-8 flex flex-col sm:flex-row justify-center gap-4"
+    >
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-          className="flex flex-col items-center justify-center gap-4 sm:flex-row"
-        >
-          <button 
-            onClick={() => document.getElementById("menu-section")?.scrollIntoView({ behavior: "smooth" })}
-            className="group flex items-center gap-2 rounded-full bg-cafe-gold px-8 py-4 font-sans text-sm font-bold uppercase tracking-wider text-[#110e0d] transition-all duration-300 hover:bg-white hover:shadow-[0_0_30px_rgba(197,168,128,0.4)]"
-          >
-            Explore Menu
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </button>
-          <button 
-            onClick={() => document.getElementById("about-section")?.scrollIntoView({ behavior: "smooth" })}
-            className="rounded-full border border-white/20 bg-white/5 px-8 py-4 font-sans text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-all duration-300 hover:bg-white/10 hover:text-cafe-gold"
-          >
-            Our Story
-          </button>
-        </motion.div>
-      </div>
-
-      {/* Scroll indicator */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1, duration: 1 }}
-        className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+      <button
+        onClick={() => navigate("/menu")}
+        className="group flex items-center justify-center gap-2 rounded-full bg-[#D4B483] px-8 py-4 text-sm font-bold uppercase tracking-wider text-[#110e0d] transition-all duration-300 hover:scale-105 hover:bg-[#E2C89B]"
       >
-        <span className="font-sans text-xs uppercase tracking-[0.2em] text-white/50">Scroll</span>
-        <motion.div 
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-          className="h-12 w-[1px] bg-gradient-to-b from-cafe-gold to-transparent"
+        Explore Menu
+        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+      </button>
+
+      <button
+        onClick={() => navigate("/about")}
+        className="rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-8 py-4 text-sm font-bold uppercase tracking-wider text-white transition-all duration-300 hover:bg-white/20"
+      >
+        Our Story
+      </button>
+
+    </motion.div>
+
+    {/* Popular Product Pill */}
+    {/* <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.8 }}
+      className="mt-10 flex justify-center"
+    >
+      <div className="flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-3 backdrop-blur-md">
+
+        <img
+          src={turkeyReuben}
+          alt=""
+          className="h-12 w-12 rounded-full object-cover"
         />
-      </motion.div>
-    </section>
+
+        <div className="text-left">
+          <p className="text-xs text-white/60 uppercase">
+            Most Popular
+          </p>
+          <p className="text-cafe-gold font-semibold">
+            Turkey Reuben Bagel
+          </p>
+        </div>
+
+      </div>
+    </motion.div> */}
+
+  </div>
+
+</section>
   );
 }

@@ -70,7 +70,7 @@ function InfoBlock({ title, children, icon: Icon }) {
   );
 }
 
-import { Package, User, MapPin, CreditCard, Receipt, ChevronLeft } from "lucide-react";
+import { Package, User, MapPin, Receipt, ChevronLeft, Calendar, ArrowLeft } from "lucide-react";
 
 function OrderDetails() {
   const { id } = useParams();
@@ -118,180 +118,206 @@ function OrderDetails() {
   }, [id]);
 
   return (
-    <main className="min-h-screen bg-cafe-bg px-4 pb-20 pt-28 text-white sm:px-6">
-      <div className="mx-auto grid w-full max-w-5xl gap-6">
-        <header className="customer-card flex flex-wrap items-center justify-between gap-4">
+    <main className="min-h-screen bg-[#110e0d] px-4 pb-24 pt-32 text-white sm:px-6 relative overflow-hidden">
+      {/* Decorative background blur */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-cafe-gold/5 rounded-full blur-[150px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+      <div className="mx-auto grid w-full max-w-5xl gap-8 relative z-10">
+        <header className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pb-6 border-b border-white/10">
           <div>
-            <p className="m-0 font-sans text-xs font-bold uppercase tracking-[0.2em] text-cafe-gold">
-              Order Details
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 text-white/60 hover:text-cafe-gold transition-colors font-sans font-bold text-sm mb-6"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </button>
+            <p className="font-sans text-xs font-bold uppercase tracking-[0.2em] text-cafe-gold mb-2">
+              Order Receipt
             </p>
-            <h1 className="m-0 mt-2 font-serif text-3xl font-bold sm:text-4xl">
+            <h1 className="font-serif text-4xl font-bold sm:text-5xl text-white">
               {order?.order_number || `Order #${id}`}
             </h1>
-            <p className="m-0 mt-2 font-sans text-sm font-light text-white/60">
-              Full order, address, item, and payment information.
-            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 font-sans text-sm font-bold tracking-wider text-white transition-colors hover:bg-cafe-gold hover:text-[#110e0d]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back to Home
-          </button>
+          {order && (
+            <div className="flex flex-col items-start md:items-end gap-2">
+              <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider ${
+                order.order_status === "completed" ? "bg-green-500/20 text-green-400" :
+                order.order_status === "cancelled" ? "bg-red-500/20 text-red-400" :
+                "bg-amber-500/20 text-amber-400"
+              }`}>
+                {String(order.order_status || "Processing").replace(/_/g, " ")}
+              </span>
+              <div className="flex items-center gap-2 text-white/50 text-sm font-sans">
+                <Calendar className="h-4 w-4" />
+                {formatDateTime(order.created_at)}
+              </div>
+            </div>
+          )}
         </header>
 
-        {loading ? (
-          <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-5 text-white/70">
-            Loading order details...
+        {loading && (
+          <div className="py-20 flex flex-col items-center justify-center text-white/50">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-cafe-gold border-t-transparent mb-4" />
+            <p>Fetching your order...</p>
           </div>
-        ) : null}
+        )}
 
-        {errorMessage ? (
-          <div className="rounded-[22px] border border-red-500/25 bg-red-500/10 p-5 text-red-200">
+        {errorMessage && (
+          <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-6 text-red-200">
             {errorMessage}
           </div>
-        ) : null}
+        )}
 
-        {order ? (
-          <>
-            <div className="grid gap-6 lg:grid-cols-3">
-              <InfoBlock title="Customer" icon={User}>
-                <div>{order.customer_name}</div>
-                <div>{order.customer_email}</div>
-                <div>{order.customer_phone}</div>
-              </InfoBlock>
+        {order && (
+          <div className="grid gap-8 lg:grid-cols-12">
+            
+            {/* Left Column: Order Items & Summary */}
+            <div className="lg:col-span-8 space-y-8">
+              <section className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <Receipt className="h-6 w-6 text-cafe-gold" />
+                  <h2 className="font-serif text-2xl font-bold text-white">Order Items</h2>
+                </div>
+                
+                <div className="space-y-4">
+                  {(order.items || []).map((item) => (
+                    <div key={item.id} className="flex flex-col sm:flex-row justify-between gap-4 py-4 border-b border-white/5 last:border-0 last:pb-0">
+                      <div className="flex-1">
+                        <div className="font-serif text-xl font-bold text-white mb-1">{item.item_name}</div>
+                        {Array.isArray(item.selected_addons) && item.selected_addons.length > 0 && (
+                          <div className="text-sm text-white/50 mb-2">
+                            {item.selected_addons.map((addon) => addon.addon_name).join(", ")}
+                          </div>
+                        )}
+                        {item.item_notes && (
+                          <div className="text-sm text-cafe-gold/80 italic mb-2">
+                            "{item.item_notes}"
+                          </div>
+                        )}
+                        <div className="font-sans text-xs uppercase tracking-wider text-white/40">
+                          Qty: {item.quantity} × {formatCurrency(item.final_unit_price, order.currency_code)}
+                        </div>
+                      </div>
+                      <div className="font-serif text-xl font-bold text-cafe-gold sm:text-right">
+                        {formatCurrency(item.line_total, order.currency_code)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-              <InfoBlock title="Order Status" icon={Package}>
-                <div className="capitalize">
-                  Order: <span className="font-bold text-cafe-gold">{String(order.order_status || "-").replace(/_/g, " ")}</span>
+              {/* Payment Details */}
+              <section className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <Receipt className="h-6 w-6 text-cafe-gold" />
+                  <h2 className="font-serif text-2xl font-bold text-white">Payment Details</h2>
                 </div>
-                <div className="capitalize">
-                  Payment: {String(order.payment_status || "-").replace(/_/g, " ")}
-                </div>
-                <div className="capitalize">
-                  Method: {String(order.payment_method || "-").replace(/_/g, " ")}
-                </div>
-                <div>Placed: {formatDateTime(order.created_at)}</div>
-              </InfoBlock>
-
-              <InfoBlock title="Delivery Address" icon={MapPin}>
-                {addressLines(order.delivery_address).length > 0 ? (
-                  addressLines(order.delivery_address).map((line, index) => (
-                    <div key={`${line}-${index}`}>{line}</div>
-                  ))
+                {(order.payments || []).length === 0 ? (
+                  <p className="text-white/50">No payment records found.</p>
                 ) : (
-                  <div>-</div>
+                  order.payments.map((payment) => (
+                    <div key={payment.id} className="bg-black/30 rounded-2xl p-5 border border-white/5 mb-4 last:mb-0">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wide ${
+                          Number(payment.is_payment_success) === 1 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                        }`}>
+                          {String(payment.status || "-").replace(/_/g, " ")}
+                        </span>
+                        <span className="font-bold text-white">{formatCurrency(payment.amount, payment.currency_code)}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-white/60 mb-4">
+                        <div><span className="text-white/40 block text-xs">Method</span>{payment.gateway || "-"}</div>
+                        <div><span className="text-white/40 block text-xs">Transaction ID</span>{payment.transaction_id || "-"}</div>
+                      </div>
+                      {payment.failure_message && (
+                        <div className="mt-2 text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">
+                          Error: {payment.failure_message}
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
-              </InfoBlock>
+              </section>
             </div>
 
-            <InfoBlock title="Order Items" icon={Receipt}>
-              {(order.items || []).map((item) => (
-                <div key={item.id} className="rounded-xl border border-white/5 bg-white/[0.02] p-4 transition-colors hover:bg-white/5">
-                  <div className="flex flex-wrap justify-between gap-3">
-                    <div>
-                      <div className="font-serif text-lg font-bold text-white">{item.item_name}</div>
-                      <div className="mt-1 font-sans text-xs uppercase tracking-wider text-white/50">
-                        Qty {item.quantity} × {formatCurrency(item.final_unit_price, order.currency_code)}
-                      </div>
+            {/* Right Column: Customer & Bill Summary */}
+            <div className="lg:col-span-4 space-y-8">
+              {/* Bill Summary */}
+              <section className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+                <h2 className="font-serif text-2xl font-bold text-white mb-6">Summary</h2>
+                <div className="space-y-4 font-sans text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Subtotal</span>
+                    <span className="text-white">{formatCurrency(order.subtotal_amount, order.currency_code)}</span>
+                  </div>
+                  {Number(order.discount_amount) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Discount</span>
+                      <span className="text-green-400">-{formatCurrency(order.discount_amount, order.currency_code)}</span>
                     </div>
-                    <div className="font-serif text-lg font-bold text-cafe-gold">
-                      {formatCurrency(item.line_total, order.currency_code)}
+                  )}
+                  {Number(order.addon_amount) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Addons</span>
+                      <span className="text-white">{formatCurrency(order.addon_amount, order.currency_code)}</span>
+                    </div>
+                  )}
+                  {Number(order.tax_amount) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Tax</span>
+                      <span className="text-white">{formatCurrency(order.tax_amount, order.currency_code)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Delivery</span>
+                    <span className="text-white">{formatCurrency(order.delivery_fee, order.currency_code)}</span>
+                  </div>
+                  
+                  <div className="pt-6 mt-6 border-t border-white/10">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-bold uppercase tracking-wider text-sm">Total</span>
+                      <span className="font-serif text-3xl font-bold text-cafe-gold">
+                        {formatCurrency(order.total_amount, order.currency_code)}
+                      </span>
                     </div>
                   </div>
-                  {Array.isArray(item.selected_addons) && item.selected_addons.length > 0 ? (
-                    <div className="mt-2 font-sans text-xs font-light text-white/50">
-                      <span className="font-semibold">Addons:</span> {item.selected_addons.map((addon) => addon.addon_name).join(", ")}
-                    </div>
-                  ) : null}
-                  {item.item_notes ? (
-                    <div className="mt-2 font-sans text-xs font-light text-white/50">
-                      <span className="font-semibold">Note:</span> {item.item_notes}
-                    </div>
-                  ) : null}
                 </div>
-              ))}
-            </InfoBlock>
+              </section>
 
-            <InfoBlock title="Payment Details">
-              {(order.payments || []).length === 0 ? (
-                <div>No payment record found for this order.</div>
-              ) : (
-                order.payments.map((payment) => (
-                  <div key={payment.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex flex-wrap justify-between gap-3">
-                      <div className="font-extrabold capitalize text-white">
-                        {String(payment.status || "-").replace(/_/g, " ")}
-                      </div>
-                      <div className="font-extrabold text-white">
-                        {formatCurrency(payment.amount, payment.currency_code)}
-                      </div>
-                    </div>
-                    <div className="mt-2 grid gap-1 text-xs text-white/55">
-                      <div>Gateway: {payment.gateway || "-"}</div>
-                      <div>RRN: {payment.rrn || "-"}</div>
-                      <div>Transaction: {payment.transaction_id || "-"}</div>
-                      <div>Payment ID: {payment.provider_payment_id || "-"}</div>
-                      <div>Charge ID: {payment.provider_charge_id || "-"}</div>
-                      <div>Balance Transaction: {payment.provider_balance_transaction_id || "-"}</div>
-                      <div>Amount Paise: {payment.amount_in_paise ?? "-"}</div>
-                      <div>Success Flag: {Number(payment.is_payment_success) === 1 ? "Yes" : "No"}</div>
-                      <div>Paid at: {formatDateTime(payment.paid_at)}</div>
-                      {payment.failure_message ? (
-                        <div className="text-red-200">Failure: {payment.failure_message}</div>
-                      ) : null}
-                    </div>
-                    <details className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
-                      <summary className="cursor-pointer text-xs font-bold text-white">
-                        Metadata
-                      </summary>
-                      <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-xs leading-5 text-white/55">
-                        {formatJson(payment.metadata)}
-                      </pre>
-                    </details>
-                    <details className="mt-2 rounded-xl border border-white/10 bg-black/20 p-3">
-                      <summary className="cursor-pointer text-xs font-bold text-white">
-                        Raw Event
-                      </summary>
-                      <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-xs leading-5 text-white/55">
-                        {formatJson(payment.raw_event)}
-                      </pre>
-                    </details>
-                  </div>
-                ))
-              )}
-            </InfoBlock>
+              {/* Customer Info */}
+              <section className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <User className="h-5 w-5 text-cafe-gold" />
+                  <h2 className="font-serif text-xl font-bold text-white">Customer</h2>
+                </div>
+                <div className="space-y-2 text-sm text-white/70">
+                  <p className="font-bold text-white">{order.customer_name}</p>
+                  <p>{order.customer_email}</p>
+                  <p>{order.customer_phone}</p>
+                </div>
+              </section>
 
-            <InfoBlock title="Bill Summary" icon={Receipt}>
-              <div className="flex justify-between gap-3 font-sans text-sm">
-                <span className="text-white/70">Subtotal</span>
-                <span className="font-medium text-white">{formatCurrency(order.subtotal_amount, order.currency_code)}</span>
-              </div>
-              <div className="flex justify-between gap-3 font-sans text-sm">
-                <span className="text-white/70">Discount</span>
-                <span className="font-medium text-green-400">{formatCurrency(order.discount_amount, order.currency_code)}</span>
-              </div>
-              <div className="flex justify-between gap-3 font-sans text-sm">
-                <span className="text-white/70">Addons</span>
-                <span className="font-medium text-white">{formatCurrency(order.addon_amount, order.currency_code)}</span>
-              </div>
-              <div className="flex justify-between gap-3 font-sans text-sm">
-                <span className="text-white/70">Tax</span>
-                <span className="font-medium text-white">{formatCurrency(order.tax_amount, order.currency_code)}</span>
-              </div>
-              <div className="flex justify-between gap-3 font-sans text-sm">
-                <span className="text-white/70">Delivery</span>
-                <span className="font-medium text-white">{formatCurrency(order.delivery_fee, order.currency_code)}</span>
-              </div>
-              <div className="mt-2 flex justify-between gap-3 border-t border-white/10 pt-4 font-serif text-2xl font-bold text-cafe-gold">
-                <span>Total</span>
-                <span>{formatCurrency(order.total_amount, order.currency_code)}</span>
-              </div>
-            </InfoBlock>
-          </>
-        ) : null}
+              {/* Delivery Address */}
+              <section className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <MapPin className="h-5 w-5 text-cafe-gold" />
+                  <h2 className="font-serif text-xl font-bold text-white">Delivery</h2>
+                </div>
+                <div className="space-y-1 text-sm text-white/70 leading-relaxed">
+                  {addressLines(order.delivery_address).length > 0 ? (
+                    addressLines(order.delivery_address).map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))
+                  ) : (
+                    <div className="italic text-white/40">Collection / No address provided</div>
+                  )}
+                </div>
+              </section>
+            </div>
+            
+          </div>
+        )}
       </div>
     </main>
   );

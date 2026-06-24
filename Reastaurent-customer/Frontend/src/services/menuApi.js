@@ -38,10 +38,30 @@ export const fetchItemsByCategory = async (categoryId, page = 1, limit = 12, sea
   return data;
 };
 
+const normalizeAddonGroups = (addonData = []) => {
+  if (!Array.isArray(addonData)) {
+    return [];
+  }
+
+  return addonData.flatMap((group) => {
+    if (Array.isArray(group.options)) {
+      return group.options.map((option) => ({
+        ...option,
+        addon_group: group.addon_group || group.title || "Add-ons",
+        title: group.title || group.addon_group || "Add-ons",
+        min_select: Number(group.min_select || 0),
+        max_select: Number(group.max_select || 0),
+      }));
+    }
+
+    return group;
+  });
+};
+
 export const fetchItemAddons = async (itemId) => {
   const data = await postJson(ITEM_ADDONS, {
     item_id: itemId,
   });
 
-  return data.data || [];
+  return normalizeAddonGroups(data.data);
 };
