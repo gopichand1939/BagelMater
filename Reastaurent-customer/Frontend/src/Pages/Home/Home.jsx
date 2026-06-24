@@ -477,21 +477,15 @@ function Home() {
       if (debouncedSearchRef.current !== searchQuery) {
         debouncedSearchRef.current = searchQuery;
         
-        let targetCategory = selectedCategory;
         if (searchQuery.trim() !== "") {
-          if (selectedCategory !== "all") {
-            setSelectedCategory("all");
-            targetCategory = "all";
-            skipNextSelectedCategoryFetchRef.current = true;
-          }
           const menuSection = document.getElementById("menu-section");
           if (menuSection) {
             menuSection.scrollIntoView({ behavior: "smooth" });
           }
         }
         
-        if (targetCategory) {
-          void loadItems(targetCategory, true);
+        if (selectedCategory) {
+          void loadItems(selectedCategory, true);
         }
       }
     }, 400);

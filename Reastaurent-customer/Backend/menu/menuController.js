@@ -112,9 +112,11 @@ const getItemsByCategory = async (req, res) => {
             i.is_active,
             i.sort_order
           FROM items i
-          LEFT JOIN category c ON c.id = i.category_id
+          INNER JOIN category c ON c.id = i.category_id
           WHERE i.is_deleted = 0
             AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
             AND (i.item_name ILIKE $1 OR i.item_description ILIKE $1 OR c.category_name ILIKE $1)
           ORDER BY i.sort_order ASC, i.id ASC
           LIMIT $2 OFFSET $3
@@ -122,9 +124,11 @@ const getItemsByCategory = async (req, res) => {
         countQuery = `
           SELECT COUNT(*) AS total
           FROM items i
-          LEFT JOIN category c ON c.id = i.category_id
+          INNER JOIN category c ON c.id = i.category_id
           WHERE i.is_deleted = 0
             AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
             AND (i.item_name ILIKE $1 OR i.item_description ILIKE $1 OR c.category_name ILIKE $1)
         `;
         itemsParams = [searchPattern, limitNumber, offset];
@@ -152,10 +156,12 @@ const getItemsByCategory = async (req, res) => {
             i.is_active,
             i.sort_order
           FROM items i
-          LEFT JOIN category c ON c.id = i.category_id
+          INNER JOIN category c ON c.id = i.category_id
           WHERE i.category_id = $1
             AND i.is_deleted = 0
             AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
             AND (i.item_name ILIKE $2 OR i.item_description ILIKE $2 OR c.category_name ILIKE $2)
           ORDER BY i.sort_order ASC, i.id ASC
           LIMIT $3 OFFSET $4
@@ -163,10 +169,12 @@ const getItemsByCategory = async (req, res) => {
         countQuery = `
           SELECT COUNT(*) AS total
           FROM items i
-          LEFT JOIN category c ON c.id = i.category_id
+          INNER JOIN category c ON c.id = i.category_id
           WHERE i.category_id = $1
             AND i.is_deleted = 0
             AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
             AND (i.item_name ILIKE $2 OR i.item_description ILIKE $2 OR c.category_name ILIKE $2)
         `;
         itemsParams = [category_id, searchPattern, limitNumber, offset];
@@ -196,17 +204,22 @@ const getItemsByCategory = async (req, res) => {
             i.is_active,
             i.sort_order
           FROM items i
-          LEFT JOIN category c ON c.id = i.category_id
+          INNER JOIN category c ON c.id = i.category_id
           WHERE i.is_deleted = 0
             AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
           ORDER BY i.sort_order ASC, i.id ASC
           LIMIT $1 OFFSET $2
         `;
         countQuery = `
           SELECT COUNT(*) AS total
-          FROM items
-          WHERE is_deleted = 0
-            AND is_active = 1
+          FROM items i
+          INNER JOIN category c ON c.id = i.category_id
+          WHERE i.is_deleted = 0
+            AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
         `;
         itemsParams = [limitNumber, offset];
         countParams = [];
@@ -233,19 +246,24 @@ const getItemsByCategory = async (req, res) => {
             i.is_active,
             i.sort_order
           FROM items i
-          LEFT JOIN category c ON c.id = i.category_id
+          INNER JOIN category c ON c.id = i.category_id
           WHERE i.category_id = $1
             AND i.is_deleted = 0
             AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
           ORDER BY i.sort_order ASC, i.id ASC
           LIMIT $2 OFFSET $3
         `;
         countQuery = `
           SELECT COUNT(*) AS total
-          FROM items
-          WHERE category_id = $1
-            AND is_deleted = 0
-            AND is_active = 1
+          FROM items i
+          INNER JOIN category c ON c.id = i.category_id
+          WHERE i.category_id = $1
+            AND i.is_deleted = 0
+            AND i.is_active = 1
+            AND c.is_deleted = 0
+            AND c.is_active = 1
         `;
         itemsParams = [category_id, limitNumber, offset];
         countParams = [category_id];
