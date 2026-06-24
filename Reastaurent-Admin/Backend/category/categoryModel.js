@@ -15,7 +15,7 @@ const categoryModel = {
         $2::TEXT, 
         $3::VARCHAR(255), 
         $4::SMALLINT,
-        COALESCE((SELECT MAX(sort_order) FROM category WHERE is_deleted = 0), 0) + 1
+        COALESCE((SELECT MIN(sort_order) FROM category WHERE is_deleted = 0), 0) - 1
       WHERE NOT EXISTS (
         SELECT 1
         FROM category

@@ -601,6 +601,10 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
                   style={{ borderColor: sidebarColors.submenuBorder }}
                 >
                   {menu.children.map((child) => {
+                    // ITEMS MENU NAME CODE LINES COMMEMT OUT DONT RMEOVE JUST COMEMNT
+                    if (child.menu_key === "items") {
+                      return null;
+                    }
                     const ChildIcon = iconMap[child.menu_key] || DefaultIcon;
                     const childLabel = getSidebarLabel(child);
 
