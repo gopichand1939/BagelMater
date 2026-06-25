@@ -13,6 +13,7 @@ import {
   setOrderData,
 } from "../../Redux/CardSlice";
 import { subscribeToAdminRealtimeEvent, ADMIN_REALTIME_EVENT_TYPES } from "../../realtime/adminRealtimeEvents";
+import { startAdminNotificationAlert } from "../../Utils/notificationSound";
 
 const formatCurrency = (value, currencyCode = "INR") => {
   const amount = Number(value || 0);
@@ -649,7 +650,7 @@ function Order() {
 
         if (change?.action === "created" && targetOrderId) {
           highlightOrder(targetOrderId);
-          playNewOrderSound();
+          startAdminNotificationAlert();
           applyRealtimeOrderChange(change);
           setCurrentPage(1);
           scrollOrdersTop();
@@ -665,7 +666,7 @@ function Order() {
         fetchData(currentPage, pageSize);
       }
     );
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, activeStatus, filters.search]);
 
   useEffect(() => {
     return subscribeToAdminRealtimeEvent(
@@ -688,7 +689,7 @@ function Order() {
 
         if (targetOrderId) {
           highlightOrder(targetOrderId);
-          playNewOrderSound();
+          startAdminNotificationAlert();
         }
 
         setCurrentPage(1);
@@ -696,7 +697,7 @@ function Order() {
         fetchData(1, pageSize);
       }
     );
-  }, [pageSize, activeStatus, filters.search]);
+  }, [currentPage, pageSize, activeStatus, filters.search]);
 
   useEffect(() => {
     return subscribeToAdminRealtimeEvent(
@@ -1147,11 +1148,20 @@ function Order() {
           </label>
         </div>
 
-        <div className="relative min-h-[520px]">
+        <div className="relative min-h-0">
           <div className="min-w-0 bg-transparent">
-            <div ref={ordersListRef} className="max-h-[calc(100vh-280px)] min-h-[430px] overflow-y-auto grid gap-4 pb-6">
+            <div ref={ordersListRef} className="max-h-[calc(100vh-280px)] overflow-y-auto grid gap-4 pb-2">
               {loading ? (
-                <div className="grid min-h-[220px] place-items-center text-slate-500">Loading orders...</div>
+                <div className="grid min-h-[220px] place-items-center">
+                  <div className="relative flex h-14 w-14 items-center justify-center">
+                    {/* Glow backdrop */}
+                    <div className="absolute inset-0 animate-ping rounded-full bg-emerald-100 opacity-20"></div>
+                    {/* Subtle outer border */}
+                    <div className="absolute inset-0 rounded-full border-[3.5px] border-slate-100"></div>
+                    {/* Main spinning indicator */}
+                    <div className="absolute inset-0 animate-spin rounded-full border-[3.5px] border-transparent border-t-[#57b98f] border-l-[#57b98f]"></div>
+                  </div>
+                </div>
               ) : visibleOrders.length === 0 ? (
                 <div className="grid min-h-[220px] place-items-center text-slate-500">No orders found</div>
               ) : (
@@ -1223,9 +1233,9 @@ function Order() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-4 px-2">
+            <div className="flex items-center justify-between border-t border-border-subtle pt-2 pb-0.5 px-2">
               <span className="text-sm font-extrabold text-slate-500">Total Rows: {totalCount}</span>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   className="h-9 rounded-[8px] border border-border-subtle px-3 text-sm font-extrabold text-slate-600 disabled:opacity-50"
@@ -1246,7 +1256,7 @@ function Order() {
                   Next
                 </button>
                 <select
-                  className="ui-input-base h-9 rounded-[8px] px-2"
+                  className="ui-input-base h-9 w-fit rounded-[8px] px-2 py-0 text-sm font-extrabold text-slate-600 shadow-none"
                   value={pageSize}
                   onChange={(event) => handlePageChange(1, Number(event.target.value))}
                 >

@@ -22,103 +22,120 @@ const createNotification = async ({
   source = "",
   payload = {},
 }) => {
-  const duplicateCheckQuery = `
-    SELECT
-      id,
-      notification_type,
+  const client = await db.pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Lock key: a hash of entity type, action, and entity ID to prevent concurrent duplicate inserts
+    const lockKeyString = `notification_lock_${entity}_${action}_${entityId || 0}`;
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [lockKeyString]);
+
+    const duplicateCheckQuery = `
+      SELECT
+        id,
+        notification_type,
+        entity,
+        action,
+        entity_id,
+        title,
+        message,
+        redirect_path,
+        source,
+        payload,
+        is_read,
+        read_at,
+        created_at,
+        updated_at
+      FROM notifications
+      WHERE notification_type = $1
+        AND entity = $2
+        AND action = $3
+        AND COALESCE(entity_id, 0) = COALESCE($4, 0)
+        AND title = $5
+        AND message = $6
+        AND redirect_path = $7
+        AND source = $8
+        AND payload = $9::jsonb
+        AND is_deleted = 0
+        AND created_at >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
+      ORDER BY id DESC
+      LIMIT 1;
+    `;
+
+    const duplicateResult = await client.query(duplicateCheckQuery, [
+      notificationType,
       entity,
       action,
-      entity_id,
+      entityId,
       title,
       message,
-      redirect_path,
+      redirectPath,
       source,
-      payload,
-      is_read,
-      read_at,
-      created_at,
-      updated_at
-    FROM notifications
-    WHERE notification_type = $1
-      AND entity = $2
-      AND action = $3
-      AND COALESCE(entity_id, 0) = COALESCE($4, 0)
-      AND title = $5
-      AND message = $6
-      AND redirect_path = $7
-      AND source = $8
-      AND payload = $9::jsonb
-      AND is_deleted = 0
-      AND created_at >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
-    ORDER BY id DESC
-    LIMIT 1;
-  `;
+      JSON.stringify(payload || {}),
+    ]);
 
-  const duplicateResult = await db.query(duplicateCheckQuery, [
-    notificationType,
-    entity,
-    action,
-    entityId,
-    title,
-    message,
-    redirectPath,
-    source,
-    JSON.stringify(payload || {}),
-  ]);
+    if (duplicateResult.rows[0]) {
+      await client.query("COMMIT");
+      return {
+        ...normalizeNotification(duplicateResult.rows[0]),
+        wasExisting: true,
+      };
+    }
 
-  if (duplicateResult.rows[0]) {
+    const query = `
+      INSERT INTO notifications (
+        notification_type,
+        entity,
+        action,
+        entity_id,
+        title,
+        message,
+        redirect_path,
+        source,
+        payload
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+      RETURNING
+        id,
+        notification_type,
+        entity,
+        action,
+        entity_id,
+        title,
+        message,
+        redirect_path,
+        source,
+        payload,
+        is_read,
+        read_at,
+        created_at,
+        updated_at;
+    `;
+
+    const result = await client.query(query, [
+      notificationType,
+      entity,
+      action,
+      entityId,
+      title,
+      message,
+      redirectPath,
+      source,
+      JSON.stringify(payload || {}),
+    ]);
+
+    await client.query("COMMIT");
+
     return {
-      ...normalizeNotification(duplicateResult.rows[0]),
-      wasExisting: true,
+      ...normalizeNotification(result.rows[0] || null),
+      wasExisting: false,
     };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  const query = `
-    INSERT INTO notifications (
-      notification_type,
-      entity,
-      action,
-      entity_id,
-      title,
-      message,
-      redirect_path,
-      source,
-      payload
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
-    RETURNING
-      id,
-      notification_type,
-      entity,
-      action,
-      entity_id,
-      title,
-      message,
-      redirect_path,
-      source,
-      payload,
-      is_read,
-      read_at,
-      created_at,
-      updated_at;
-  `;
-
-  const result = await db.query(query, [
-    notificationType,
-    entity,
-    action,
-    entityId,
-    title,
-    message,
-    redirectPath,
-    source,
-    JSON.stringify(payload || {}),
-  ]);
-
-  return {
-    ...normalizeNotification(result.rows[0] || null),
-    wasExisting: false,
-  };
 };
 
 const getNotificationList = async ({

@@ -44,7 +44,23 @@ const createMenuUpdatesGateway = (server) => {
     path: MENU_SOCKET_PATH,
   });
 
+  const heartbeatInterval = setInterval(() => {
+    webSocketServer.clients.forEach((socket) => {
+      if (socket.isAlive === false) {
+        console.log(`[menu-events][customer-backend] Terminating inactive WebSocket client. customerId=${socket.customerId || "guest"}`);
+        return socket.terminate();
+      }
+      socket.isAlive = false;
+      socket.ping();
+    });
+  }, 30000);
+
   webSocketServer.on("connection", async (socket, request) => {
+    socket.isAlive = true;
+    socket.on("pong", () => {
+      socket.isAlive = true;
+    });
+
     const customer = await resolveCustomerFromSocketRequest(request);
     socket.customerId = customer?.id || null;
 
@@ -67,6 +83,10 @@ const createMenuUpdatesGateway = (server) => {
         `[menu-events][customer-backend] WebSocket client disconnected. Total clients: ${webSocketServer.clients.size}`
       );
     });
+  });
+
+  webSocketServer.on("close", () => {
+    clearInterval(heartbeatInterval);
   });
 
   const broadcastMenuUpdate = (change) => {

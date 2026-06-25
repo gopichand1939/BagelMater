@@ -46,7 +46,23 @@ const createAdminUpdatesGateway = (server) => {
     path: ADMIN_SOCKET_PATH,
   });
 
+  const heartbeatInterval = setInterval(() => {
+    webSocketServer.clients.forEach((socket) => {
+      if (socket.isAlive === false) {
+        console.log(`[admin-events][backend] Terminating inactive WebSocket client. adminId=${socket.adminId || "unknown"}`);
+        return socket.terminate();
+      }
+      socket.isAlive = false;
+      socket.ping();
+    });
+  }, 30000);
+
   webSocketServer.on("connection", async (socket, request) => {
+    socket.isAlive = true;
+    socket.on("pong", () => {
+      socket.isAlive = true;
+    });
+
     const admin = await resolveAdminFromSocketRequest(request);
 
     if (!admin?.id) {
@@ -75,6 +91,10 @@ const createAdminUpdatesGateway = (server) => {
         `[admin-events][backend] WebSocket client disconnected. Total clients: ${webSocketServer.clients.size}`
       );
     });
+  });
+
+  webSocketServer.on("close", () => {
+    clearInterval(heartbeatInterval);
   });
 
   const broadcast = (type, change, logPrefix) => {

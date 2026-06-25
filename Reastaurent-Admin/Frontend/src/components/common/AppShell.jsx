@@ -276,14 +276,7 @@ function AppShell() {
           );
 
           if (createdNotification) {
-            if (
-              isFreshNotification(
-                createdNotification,
-                change?.emittedAt || change?.entityData?.created_at
-              )
-            ) {
-              startAdminNotificationAlert();
-            }
+            startAdminNotificationAlert();
 
             if (
               String(createdNotification.entity || "").toLowerCase() === "order" &&

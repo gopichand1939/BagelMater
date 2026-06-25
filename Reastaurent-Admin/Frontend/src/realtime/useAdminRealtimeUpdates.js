@@ -94,12 +94,7 @@ export const useAdminRealtimeUpdates = ({
     let pendingWsBaseOverride = "";
 
     const scheduleReconnect = () => {
-      if (isDisposed || reconnectTimer || consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-          console.warn(
-            "Admin realtime updates disabled after repeated websocket failures. Check WS endpoint/proxy configuration."
-          );
-        }
+      if (isDisposed || reconnectTimer) {
         return;
       }
 
