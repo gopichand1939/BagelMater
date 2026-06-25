@@ -32,8 +32,8 @@ export const API_BASE_URL = trimTrailingSlash(
 
 export const CATEGORY_LIST = `${API_BASE_URL}/categories`;
 export const ITEMS_BY_CATEGORY = `${API_BASE_URL}/items-by-category`;
-export const ITEM_ADDONS = "https://cafe-customer.onrender.com/api/item-addons";
-export const TOP_PRODUCTS = "https://cafe-customer.onrender.com/api/top-products";
+export const ITEM_ADDONS = `${API_BASE_URL}/item-addons`;
+export const TOP_PRODUCTS = `${API_BASE_URL}/top-products`;
 export const CUSTOMER_REGISTER = `${API_BASE_URL}/auth/register`;
 export const CUSTOMER_LOGIN = `${API_BASE_URL}/auth/login`;
 export const  CUSTOMER_REFRESH_TOKEN = `${API_BASE_URL}/auth/refresh-token`;
