@@ -550,6 +550,7 @@ function CartDrawer({
                 />
 
                 {orderType === "delivery" ? (
+                  <>
                     <div className="flex flex-col gap-1.5 mt-4 mb-3">
                       <label className="text-sm font-semibold text-white/80 m-0">
                         Delivery Address
@@ -728,6 +729,7 @@ function CartDrawer({
                         />
                       </>
                     ) : null}
+                  </>
                 ) : null}
 
                 <label className="text-sm font-semibold text-white/80 mt-4 block">

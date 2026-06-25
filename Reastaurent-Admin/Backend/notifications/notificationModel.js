@@ -319,7 +319,6 @@ const getUnreadSummary = async (limit = 10) => {
       updated_at
     FROM notifications
     WHERE is_deleted = 0
-      AND is_read = 0
     ORDER BY id DESC
     LIMIT $1;
   `;

@@ -5,6 +5,7 @@ import {
   ADMIN_LOGOUT,
   APP_TITLE,
   NOTIFICATION_MARK_READ,
+  NOTIFICATION_MARK_ALL_READ,
   NOTIFICATION_UNREAD_SUMMARY,
 } from "../../Utils/Constant";
 import { clearAuthSession, getStoredAdminProfile } from "../../Utils/authStorage";
@@ -355,6 +356,33 @@ function AppShell() {
     }
   };
 
+  const handleBellClick = async () => {
+    setIsNotificationMenuOpen((prev) => {
+      const nextVal = !prev;
+      if (nextVal && unreadCount > 0) {
+        // Optimistic UI updates
+        setUnreadCount(0);
+        setRecentNotifications((prevList) =>
+          prevList.map((item) => ({ ...item, is_read: 1 }))
+        );
+        setHighlightedNotificationIds([]);
+
+        // Mark all read on backend
+        fetchWithRefreshToken(NOTIFICATION_MARK_ALL_READ, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        }).catch(() => {
+          // Silent fallback on API error
+        });
+      }
+      return nextVal;
+    });
+    stopAdminNotificationAlert();
+  };
+
   const avatarLabel = adminProfile?.name?.trim?.()?.charAt(0)?.toUpperCase() || "B";
 
   return (
@@ -415,10 +443,7 @@ function AppShell() {
               <button
                 type="button"
                 className="relative grid h-11 w-11 place-items-center rounded-2xl border border-border-subtle bg-surface-muted text-brand-700 shadow-[0_8px_18px_rgba(25,60,48,0.06)]"
-                onClick={() => {
-                  setIsNotificationMenuOpen((prev) => !prev);
-                  stopAdminNotificationAlert();
-                }}
+                onClick={handleBellClick}
               >
                 <NotificationBellIcon className="h-5 w-5" />
                 {unreadCount > 0 ? (
