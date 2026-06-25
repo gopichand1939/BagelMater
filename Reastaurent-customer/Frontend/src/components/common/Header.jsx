@@ -112,14 +112,18 @@ function Header({
           <button 
             onClick={() => {
               if (searchOpen) {
-                if (!searchQuery) setSearchOpen(false);
+                if (searchQuery) {
+                  onSearchChange?.("");
+                } else {
+                  setSearchOpen(false);
+                }
               } else {
                 setSearchOpen(true);
               }
             }} 
             className={iconButtonClass}
           >
-            {searchOpen && searchQuery ? <X className="h-4 w-4" onClick={(e) => { e.stopPropagation(); onSearchChange?.(""); setSearchOpen(false); }} /> : <Search className="h-5 w-5" />}
+            {searchOpen && searchQuery ? <X className="h-4 w-4" /> : <Search className="h-5 w-5" />}
           </button>
         </div>
         {/* User / Dropdown */}

@@ -40,7 +40,15 @@ function Home() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
   const [restaurantSettings, setRestaurantSettings] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const stored = localStorage.getItem("customer_cart");
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error("Failed to load cart from localStorage", e);
+      return [];
+    }
+  });
   const [cartOpen, setCartOpen] = useState(false);
   const [addonCache, setAddonCache] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
@@ -79,6 +87,14 @@ function Home() {
   const skipNextSelectedCategoryFetchRef = useRef(false);
   const previousNotificationCountRef = useRef(0);
   const hasLoadedNotificationSummaryRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("customer_cart", JSON.stringify(cart));
+    } catch (e) {
+      console.error("Failed to save cart to localStorage", e);
+    }
+  }, [cart]);
 
   useEffect(() => {
     selectedCategoryRef.current = selectedCategory;
@@ -156,6 +172,15 @@ function Home() {
     try {
       const response = await fetchItemsByCategory(categoryId, pageToFetch, fetchLimit, searchQuery);
       const nextItems = response.data || [];
+
+      if (searchQuery.trim() !== "" && categoryId === "all" && nextItems.length > 0) {
+        const firstItemCategoryId = nextItems[0].category_id;
+        if (firstItemCategoryId && firstItemCategoryId !== "all") {
+          setSelectedCategory(firstItemCategoryId);
+          return;
+        }
+      }
+
       const pagination = response.pagination || {};
 
       if (reset) {
@@ -473,7 +498,7 @@ function Home() {
   }, [selectedCategory]);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
+    const handler = setTimeout(async () => {
       if (debouncedSearchRef.current !== searchQuery) {
         debouncedSearchRef.current = searchQuery;
         
@@ -482,10 +507,36 @@ function Home() {
           if (menuSection) {
             menuSection.scrollIntoView({ behavior: "smooth" });
           }
-        }
-        
-        if (selectedCategory) {
-          void loadItems(selectedCategory, true);
+          
+          try {
+            setLoadingItems(true);
+            const response = await fetchItemsByCategory("all", 1, 12, searchQuery);
+            const nextItems = response.data || [];
+            
+            if (nextItems.length > 0) {
+              const firstItemCategoryId = nextItems[0].category_id;
+              if (firstItemCategoryId && String(firstItemCategoryId) !== String(selectedCategoryRef.current)) {
+                setSelectedCategory(firstItemCategoryId);
+              } else {
+                void loadItems(selectedCategoryRef.current, true);
+              }
+            } else {
+              setItems([]);
+              setCurrentPage(1);
+              setTotalPages(1);
+              setLoadingItems(false);
+            }
+          } catch (error) {
+            console.error("Global search failed:", error);
+            setItems([]);
+            setCurrentPage(1);
+            setTotalPages(1);
+            setLoadingItems(false);
+          }
+        } else {
+          if (selectedCategory) {
+            void loadItems(selectedCategory, true);
+          }
         }
       }
     }, 400);

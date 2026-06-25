@@ -66,12 +66,10 @@ function CartDrawer({
     !STRIPE_PUBLISHABLE_KEY || !isStripeAmountAllowed;
 
   useEffect(() => {
-    if (orderType === "delivery" && paymentMethod === "cash_on_delivery") {
-      setPaymentMethod("stripe"); // Force stripe for delivery
-    } else if (paymentMethod === "stripe" && isStripeOptionDisabled) {
+    if (paymentMethod === "stripe" && isStripeOptionDisabled) {
       setPaymentMethod("cash_on_delivery");
     }
-  }, [isStripeOptionDisabled, paymentMethod, orderType]);
+  }, [isStripeOptionDisabled, paymentMethod]);
 
   const handleFieldChange = (field, value) => {
     setDeliveryForm((prev) => ({
@@ -453,18 +451,20 @@ function CartDrawer({
               <div className="customer-card grid gap-3 p-5">
                 <h3 className="m-0 font-serif text-lg font-bold text-white">Payment Method</h3>
                 
-                {orderType === "collection" ? (
-                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 transition-colors hover:bg-white/10">
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      value="cash_on_delivery"
-                      checked={paymentMethod === "cash_on_delivery"}
-                      onChange={() => setPaymentMethod("cash_on_delivery")}
-                    />
-                    <span>Pay at Collection (Cash/Card)</span>
-                  </label>
-                ) : null}
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 transition-colors hover:bg-white/10">
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value="cash_on_delivery"
+                    checked={paymentMethod === "cash_on_delivery"}
+                    onChange={() => setPaymentMethod("cash_on_delivery")}
+                  />
+                  <span>
+                    {orderType === "delivery"
+                      ? "Cash on Delivery (Cash/Card)"
+                      : "Pay at Collection (Cash/Card)"}
+                  </span>
+                </label>
                 <label
                   className={`flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 transition-colors hover:bg-white/10 ${
                     isStripeOptionDisabled ? "cursor-not-allowed opacity-50" : ""

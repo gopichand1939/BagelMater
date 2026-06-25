@@ -1,8 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getImageUrl } from "../../Utils/imageUrl";
 
 function CategoryBar({ categories, selectedCategory, onSelect, loading }) {
   const [hoveredId, setHoveredId] = useState(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedCategory && containerRef.current) {
+      const activeButton = containerRef.current.querySelector('[data-active="true"]');
+      if (activeButton) {
+        activeButton.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }
+  }, [selectedCategory]);
 
   if (loading) {
     return (
@@ -22,14 +36,18 @@ function CategoryBar({ categories, selectedCategory, onSelect, loading }) {
       <h2 className="mb-[14px] text-base font-semibold uppercase tracking-[1.5px] text-white/50">
         Categories
       </h2>
-      <div className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div 
+        ref={containerRef}
+        className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {categories.map((cat) => {
-          const isSelected = selectedCategory === cat.id;
+          const isSelected = selectedCategory !== null && selectedCategory !== undefined && String(selectedCategory) === String(cat.id);
           const isHovered = hoveredId === cat.id;
 
           return (
             <button
               key={cat.id}
+              data-active={isSelected ? "true" : "false"}
               onClick={() => onSelect(cat.id)}
               onMouseEnter={() => setHoveredId(cat.id)}
               onMouseLeave={() => setHoveredId(null)}

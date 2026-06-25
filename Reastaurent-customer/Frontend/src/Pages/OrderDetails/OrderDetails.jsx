@@ -142,7 +142,7 @@ function OrderDetails() {
           {order && (
             <div className="flex flex-col items-start md:items-end gap-2">
               <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider ${
-                order.order_status === "completed" ? "bg-green-500/20 text-green-400" :
+                (order.order_status === "completed" || order.order_status === "delivered") ? "bg-green-500/20 text-green-400" :
                 order.order_status === "cancelled" ? "bg-red-500/20 text-red-400" :
                 "bg-amber-500/20 text-amber-400"
               }`}>
@@ -243,6 +243,23 @@ function OrderDetails() {
 
             {/* Right Column: Customer & Bill Summary */}
             <div className="lg:col-span-4 space-y-8">
+              {/* Feedback Card */}
+              {(order.order_status === "delivered" || order.order_status === "completed") && (
+                <section className="bg-gradient-to-br from-cafe-gold/20 via-cafe-gold/5 to-transparent border border-cafe-gold/30 rounded-3xl p-6 sm:p-8 text-center">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cafe-gold/15 text-cafe-gold mb-4 text-xl">⭐️</div>
+                  <h3 className="font-serif text-xl font-bold text-white mb-2">Enjoy your meal?</h3>
+                  <p className="text-white/60 text-sm mb-6 leading-relaxed">Your feedback helps us grow. Share your review of Bagel Master on Google Maps!</p>
+                  <a
+                    href="https://www.google.com/maps/place/Bagel+Master/@51.530737,-0.076772,15z/data=!4m8!3m7!1s0x48761cbbff5bf991:0xbaf6506c9264106b!8m2!3d51.5307372!4d-0.0767717!9m1!1b1!16s%2Fg%2F11c5_0sllr?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full justify-center bg-cafe-gold text-[#110e0d] font-bold py-3.5 rounded-xl hover:bg-white transition-all text-sm uppercase tracking-wider shadow-md hover:shadow-cafe-gold/10 text-center"
+                  >
+                    Share Feedback
+                  </a>
+                </section>
+              )}
+
               {/* Bill Summary */}
               <section className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
                 <h2 className="font-serif text-2xl font-bold text-white mb-6">Summary</h2>

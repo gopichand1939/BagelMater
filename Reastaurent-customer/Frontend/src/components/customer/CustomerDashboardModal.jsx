@@ -321,9 +321,21 @@ export default function CustomerDashboardModal({
                             <div className="text-sm text-white/50 mb-1">{formatDateTime(order.created_at)}</div>
                             <div className="text-sm font-bold text-white">Rs {Number(order.total_amount || 0).toFixed(2)}</div>
                           </div>
-                          <button onClick={() => { onClose(); navigate(`/orders/${order.id}`); }} className="px-5 py-2.5 rounded-xl border border-white/10 text-white text-sm font-bold hover:bg-white hover:text-[#110e0d] transition-colors shrink-0">
-                            View Details
-                          </button>
+                          <div className="flex flex-wrap md:flex-nowrap gap-2 shrink-0">
+                            {order.order_status === 'delivered' && (
+                              <a 
+                                href="https://www.google.com/maps/place/Bagel+Master/@51.530737,-0.076772,15z/data=!4m8!3m7!1s0x48761cbbff5bf991:0xbaf6506c9264106b!8m2!3d51.5307372!4d-0.0767717!9m1!1b1!16s%2Fg%2F11c5_0sllr?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="px-4 py-2.5 rounded-xl bg-cafe-gold text-[#110e0d] text-sm font-bold hover:bg-white transition-colors text-center"
+                              >
+                                Share Feedback
+                              </a>
+                            )}
+                            <button onClick={() => { onClose(); navigate(`/orders/${order.id}`); }} className="px-4 py-2.5 rounded-xl border border-white/10 text-white text-sm font-bold hover:bg-white hover:text-[#110e0d] transition-colors">
+                              View Details
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
