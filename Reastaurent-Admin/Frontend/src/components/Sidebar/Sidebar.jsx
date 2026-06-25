@@ -516,6 +516,15 @@ function Sidebar({ collapsed = false, onNavigate, onLogout }) {
         style={{ backgroundImage: `linear-gradient(to bottom, ${sidebarColors.navGradientStart}, ${sidebarColors.navGradientEnd})` }}
       >
         {normalizedMenu.map((menu) => {
+          // USER MANAGEMENT and AUTHENTICATION menus commented out / hidden as requested
+          if (
+            menu.menu_key === "user_management" ||
+            menu.menu_key === "user-management" ||
+            menu.menu_key === "authentication"
+          ) {
+            return null;
+          }
+
           const hasChildren = Boolean(menu.children?.length);
           const isOpen = hasChildren ? openMenus[menu.menu_id] || false : false;
           const Icon = iconMap[menu.menu_key] || DefaultIcon;
