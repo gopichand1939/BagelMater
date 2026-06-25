@@ -25,6 +25,9 @@ const ensureRestaurantSettingsTable = async () => {
       weekly_schedule JSONB NOT NULL DEFAULT '{}'::jsonb,
       special_dates JSONB NOT NULL DEFAULT '{}'::jsonb,
       timezone_name VARCHAR(100) NOT NULL DEFAULT 'Asia/Kolkata',
+      address VARCHAR(500) NOT NULL DEFAULT '',
+      latitude DOUBLE PRECISION,
+      longitude DOUBLE PRECISION,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -42,6 +45,9 @@ const ensureRestaurantSettingsTable = async () => {
     ADD COLUMN IF NOT EXISTS weekly_schedule JSONB NOT NULL DEFAULT '{}'::jsonb,
     ADD COLUMN IF NOT EXISTS special_dates JSONB NOT NULL DEFAULT '{}'::jsonb,
     ADD COLUMN IF NOT EXISTS timezone_name VARCHAR(100) NOT NULL DEFAULT 'Asia/Kolkata',
+    ADD COLUMN IF NOT EXISTS address VARCHAR(500) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
   `;
@@ -99,6 +105,8 @@ const normalizeRow = (row) => {
     schedule_enabled: Number(row.schedule_enabled),
     weekly_schedule: normalizeWeeklySchedule(row.weekly_schedule),
     special_dates: normalizeJsonObject(row.special_dates),
+    latitude: row.latitude !== null ? Number(row.latitude) : null,
+    longitude: row.longitude !== null ? Number(row.longitude) : null,
   };
 };
 
@@ -114,6 +122,9 @@ const defaultSettings = (adminId) => ({
   weekly_schedule: DEFAULT_WEEKLY_SCHEDULE,
   special_dates: {},
   timezone_name: "Asia/Kolkata",
+  address: "",
+  latitude: null,
+  longitude: null,
   created_at: null,
   updated_at: null,
 });
@@ -146,6 +157,9 @@ const restaurantSettingsModel = {
     weeklySchedule,
     specialDates,
     timezoneName,
+    address = "",
+    latitude = null,
+    longitude = null,
   }) => {
     const query = `
       INSERT INTO restaurant_settings (
@@ -159,9 +173,12 @@ const restaurantSettingsModel = {
         schedule_end_time,
         weekly_schedule,
         special_dates,
-        timezone_name
+        timezone_name,
+        address,
+        latitude,
+        longitude
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       ON CONFLICT (admin_id)
       DO UPDATE SET
         institution_name = EXCLUDED.institution_name,
@@ -174,6 +191,9 @@ const restaurantSettingsModel = {
         weekly_schedule = EXCLUDED.weekly_schedule,
         special_dates = EXCLUDED.special_dates,
         timezone_name = EXCLUDED.timezone_name,
+        address = EXCLUDED.address,
+        latitude = EXCLUDED.latitude,
+        longitude = EXCLUDED.longitude,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *;
     `;
@@ -190,6 +210,9 @@ const restaurantSettingsModel = {
       JSON.stringify(weeklySchedule || DEFAULT_WEEKLY_SCHEDULE),
       JSON.stringify(specialDates || {}),
       timezoneName,
+      address,
+      latitude,
+      longitude,
     ];
 
     const result = await db.query(query, values);

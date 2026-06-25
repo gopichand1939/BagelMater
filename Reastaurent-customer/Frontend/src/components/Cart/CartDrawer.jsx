@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, ShoppingBag, Plus, Minus } from "lucide-react";
+import { X, ShoppingBag, Plus, Minus, MapPin, Edit } from "lucide-react";
 import { customerAuthStorage } from "../../auth/customerAuthStorage";
 import { getImageUrl } from "../../Utils/imageUrl";
 import { placeCustomerOrder } from "../../services/orderApi";
@@ -10,6 +10,8 @@ import {
 } from "../../Utils/Constant";
 import { getStripeClient } from "../../Utils/stripeClient";
 import { isRestaurantOpen } from "../../Utils/restaurantLogic";
+import { useGeolocation } from "../../hooks/useGeolocation";
+import { CUSTOMER_NEAREST_OUTLET } from "../../config/api";
 
 function CartDrawer({
   cart,
@@ -22,16 +24,139 @@ function CartDrawer({
   onOrderPlaced,
   restaurantSettings,
 }) {
-  const [deliveryForm, setDeliveryForm] = useState({
-    recipient_name: customer?.name || "",
-    phone: customer?.phone || "",
-    line1: "",
-    line2: "",
-    landmark: "",
-    city: "",
-    state: "",
-    pincode: "",
+  const [deliveryForm, setDeliveryForm] = useState(() => {
+    try {
+      const savedAddress = localStorage.getItem("customer_delivery_address");
+      if (savedAddress) {
+        return JSON.parse(savedAddress);
+      }
+    } catch (e) {}
+    return {
+      recipient_name: customer?.name || "",
+      phone: customer?.phone || "",
+      line1: "",
+      line2: "",
+      landmark: "",
+      city: "",
+      state: "",
+      pincode: "",
+      latitude: null,
+      longitude: null,
+      fullAddress: "",
+      delivery_fee: 0,
+      nearest_outlet_name: "",
+      distance_km: null,
+      delivery_available: null,
+    };
   });
+
+  const {
+    loading: geoLoading,
+    error: geoError,
+    detectLocation,
+    geocodeAddress,
+    clearError: clearGeoError,
+  } = useGeolocation();
+
+  const [addressMethod, setAddressMethod] = useState("gps");
+
+  const [deliveryChecking, setDeliveryChecking] = useState(false);
+  const [deliveryStatus, setDeliveryStatus] = useState(() => {
+    if (deliveryForm.latitude && deliveryForm.longitude) {
+      return {
+        available: deliveryForm.delivery_available,
+        fee: deliveryForm.delivery_fee,
+        outlet: deliveryForm.nearest_outlet_name,
+        distance: deliveryForm.distance_km,
+        message: deliveryForm.delivery_available
+          ? `Delivering from our ${deliveryForm.nearest_outlet_name} (${Number(deliveryForm.distance_km).toFixed(1)} km away).`
+          : "Delivery unavailable for this address.",
+      };
+    }
+    return null;
+  });
+
+  const checkDeliveryAvailability = async (lat, lon, currentForm = deliveryForm) => {
+    setDeliveryChecking(true);
+    setErrorMessage("");
+    try {
+      const response = await fetch(CUSTOMER_NEAREST_OUTLET, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          latitude: lat,
+          longitude: lon,
+          subtotal: total,
+        }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        throw new Error(resData.message || "Failed to determine branch delivery availability.");
+      }
+
+      const { data } = resData;
+      setDeliveryStatus({
+        available: data.delivery_available,
+        fee: data.delivery_fee,
+        outlet: data.nearest_outlet.name,
+        distance: data.nearest_outlet.distance_km,
+        message: data.message,
+      });
+
+      setDeliveryForm(prev => {
+        const nextForm = {
+          ...prev,
+          ...currentForm,
+          latitude: lat,
+          longitude: lon,
+          delivery_fee: data.delivery_available ? data.delivery_fee : 0,
+          nearest_outlet_name: data.nearest_outlet.name,
+          distance_km: data.nearest_outlet.distance_km,
+          delivery_available: data.delivery_available,
+        };
+        localStorage.setItem("customer_delivery_address", JSON.stringify(nextForm));
+        return nextForm;
+      });
+
+      if (!data.delivery_available) {
+        setErrorMessage(data.message);
+      }
+    } catch (err) {
+      console.error("Availability check error:", err);
+      setErrorMessage(err.message || "Could not check branch delivery availability.");
+      setDeliveryStatus(null);
+    } finally {
+      setDeliveryChecking(false);
+    }
+  };
+
+  const handleGPSLocation = async () => {
+    setErrorMessage("");
+    try {
+      const location = await detectLocation();
+      if (location) {
+        const cleanLine = location.fullAddress.split(",").slice(0, 2).join(", ");
+        const updatedForm = {
+          ...deliveryForm,
+          line1: cleanLine || location.fullAddress,
+          city: location.city || deliveryForm.city,
+          state: location.state || deliveryForm.state,
+          pincode: location.postalCode || deliveryForm.pincode,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          fullAddress: location.fullAddress,
+        };
+        setDeliveryForm(updatedForm);
+        await checkDeliveryAvailability(location.latitude, location.longitude, updatedForm);
+      }
+    } catch (err) {
+      console.error("GPS detection error:", err);
+    }
+  };
+
   const [orderNotes, setOrderNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -42,6 +167,12 @@ function CartDrawer({
   const [scheduledTime, setScheduledTime] = useState("");
 
   const cafeOpen = isRestaurantOpen(restaurantSettings);
+
+  useEffect(() => {
+    if (deliveryForm.latitude && deliveryForm.longitude && orderType === "delivery") {
+      checkDeliveryAvailability(deliveryForm.latitude, deliveryForm.longitude);
+    }
+  }, [orderType]);
 
   useEffect(() => {
     setDeliveryForm((prev) => ({
@@ -72,10 +203,15 @@ function CartDrawer({
   }, [isStripeOptionDisabled, paymentMethod]);
 
   const handleFieldChange = (field, value) => {
-    setDeliveryForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setDeliveryForm((prev) => {
+      const nextForm = { ...prev, [field]: value };
+      if (["line1", "city", "pincode"].includes(field)) {
+        nextForm.latitude = null;
+        nextForm.longitude = null;
+        nextForm.delivery_available = null;
+      }
+      return nextForm;
+    });
   };
 
   const resetMessages = () => {
@@ -97,17 +233,23 @@ function CartDrawer({
       return;
     }
 
-    if (
-      orderType === "delivery" &&
-      (!deliveryForm.line1.trim() ||
+    if (orderType === "delivery") {
+      if (addressMethod === "gps" && !deliveryForm.line1.trim()) {
+        setErrorMessage("Please click 'Detect Location' to retrieve your current location details.");
+        setSuccessMessage("");
+        return;
+      }
+      if (
+        !deliveryForm.line1.trim() ||
         !deliveryForm.city.trim() ||
-        !deliveryForm.pincode.trim())
-    ) {
-      setErrorMessage(
-        "Please add address line 1, city, and pincode for delivery."
-      );
-      setSuccessMessage("");
-      return;
+        !deliveryForm.pincode.trim()
+      ) {
+        setErrorMessage(
+          "Please add address line 1, city, and pincode for delivery."
+        );
+        setSuccessMessage("");
+        return;
+      }
     }
 
     if (paymentMethod === "stripe" && !isStripeAmountAllowed) {
@@ -123,11 +265,60 @@ function CartDrawer({
     setSubmitting(true);
     resetMessages();
 
+    let currentForm = { ...deliveryForm };
+
     try {
       const accessToken = customerAuthStorage.getAccessToken();
 
       if (!accessToken) {
         throw new Error("Please sign in again before placing your order.");
+      }
+
+      // If delivery mode is active and we don't have verified coordinates, geocode first!
+      if (orderType === "delivery" && (!currentForm.latitude || !currentForm.longitude || !currentForm.delivery_available)) {
+        const queryStr = `${currentForm.line1}, ${currentForm.city}, ${currentForm.pincode}`;
+        const resolved = await geocodeAddress(queryStr, {
+          line1: currentForm.line1,
+          city: currentForm.city,
+          pincode: currentForm.pincode,
+          state: currentForm.state,
+        });
+        if (resolved) {
+          // Perform availability check
+          const response = await fetch(CUSTOMER_NEAREST_OUTLET, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              latitude: resolved.latitude,
+              longitude: resolved.longitude,
+              subtotal: total,
+            }),
+          });
+          const resData = await response.json();
+          if (!response.ok || !resData.success) {
+            throw new Error(resData.message || "Failed to determine branch delivery availability.");
+          }
+          
+          if (!resData.data.delivery_available) {
+            throw new Error(resData.data.message);
+          }
+
+          currentForm = {
+            ...currentForm,
+            latitude: resolved.latitude,
+            longitude: resolved.longitude,
+            delivery_fee: resData.data.delivery_fee,
+            nearest_outlet_name: resData.data.nearest_outlet.name,
+            distance_km: resData.data.nearest_outlet.distance_km,
+            delivery_available: true,
+          };
+          setDeliveryForm(currentForm);
+          localStorage.setItem("customer_delivery_address", JSON.stringify(currentForm));
+        } else {
+          throw new Error("Unable to verify address coordinates. Please try manual entry or verify details.");
+        }
       }
 
       const checkoutPayload = {
@@ -140,15 +331,19 @@ function CartDrawer({
         order_type: orderType,
         scheduled_time: scheduledTime || null,
         delivery_address: orderType === "delivery" ? {
-          recipient_name: deliveryForm.recipient_name.trim(),
-          phone: deliveryForm.phone.trim(),
-          line1: deliveryForm.line1.trim(),
-          line2: deliveryForm.line2.trim(),
-          landmark: deliveryForm.landmark.trim(),
-          city: deliveryForm.city.trim(),
-          state: deliveryForm.state.trim(),
-          pincode: deliveryForm.pincode.trim(),
+          recipient_name: currentForm.recipient_name.trim(),
+          phone: currentForm.phone.trim(),
+          line1: currentForm.line1.trim(),
+          line2: currentForm.line2.trim(),
+          landmark: currentForm.landmark.trim(),
+          city: currentForm.city.trim(),
+          state: currentForm.state.trim(),
+          pincode: currentForm.pincode.trim(),
+          latitude: currentForm.latitude,
+          longitude: currentForm.longitude,
+          full_address: currentForm.fullAddress,
         } : null,
+        delivery_fee: orderType === "delivery" ? Number(currentForm.delivery_fee || 0) : 0,
         order_notes: orderNotes.trim(),
       };
 
@@ -355,10 +550,106 @@ function CartDrawer({
                 />
 
                 {orderType === "delivery" ? (
-                  <>
-                    <label className="text-sm font-semibold text-white/80 mt-4 block">
-                      Delivery Address
-                    </label>
+                    <div className="flex flex-col gap-1.5 mt-4 mb-3">
+                      <label className="text-sm font-semibold text-white/80 m-0">
+                        Delivery Address
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddressMethod("gps");
+                            resetMessages();
+                            setDeliveryStatus(null);
+                          }}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-[11px] font-bold uppercase transition-all border cursor-pointer ${
+                            addressMethod === "gps"
+                              ? "bg-cafe-gold text-[#110e0d] border-cafe-gold shadow-[0_4px_10px_rgba(230,175,98,0.2)]"
+                              : "bg-white/5 text-white/70 border-white/10 hover:border-white/20 hover:text-white"
+                          }`}
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          GPS Location
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddressMethod("manual");
+                            resetMessages();
+                            setDeliveryStatus(null);
+                            setDeliveryForm(prev => ({
+                              ...prev,
+                              latitude: null,
+                              longitude: null,
+                              delivery_available: null
+                            }));
+                          }}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-[11px] font-bold uppercase transition-all border cursor-pointer ${
+                            addressMethod === "manual"
+                              ? "bg-cafe-gold text-[#110e0d] border-cafe-gold shadow-[0_4px_10px_rgba(230,175,98,0.2)]"
+                              : "bg-white/5 text-white/70 border-white/10 hover:border-white/20 hover:text-white"
+                          }`}
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          Manual Address
+                        </button>
+                      </div>
+                    </div>
+
+                    {addressMethod === "gps" && (
+                      <div className="flex items-center justify-between gap-2 bg-black/40 border border-white/5 rounded-xl p-3 mb-2">
+                        <span className="text-[11px] text-white/50">Auto-detect location</span>
+                        <button
+                          type="button"
+                          onClick={handleGPSLocation}
+                          disabled={geoLoading || deliveryChecking}
+                          className="flex items-center gap-1.5 rounded-lg bg-cafe-gold/10 border border-cafe-gold/20 px-3 py-1.5 text-cafe-gold hover:bg-cafe-gold hover:text-[#110e0d] font-bold text-[10px] uppercase transition-all disabled:opacity-50"
+                        >
+                          {geoLoading || deliveryChecking ? (
+                            <span className="h-3 w-3 animate-spin rounded-full border border-cafe-gold border-t-transparent" />
+                          ) : (
+                            <MapPin className="w-3.5 h-3.5" />
+                          )}
+                          Detect Location
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Geolocation Loading Indicator */}
+                    {(geoLoading || deliveryChecking) && (
+                      <div className="flex items-center gap-2 bg-cafe-gold/5 border border-cafe-gold/20 rounded-xl p-3 text-[11px] text-cafe-gold mb-2">
+                        <span className="h-3 w-3 animate-spin rounded-full border border-cafe-gold border-t-transparent shrink-0" />
+                        <span>Verifying delivery details...</span>
+                      </div>
+                    )}
+
+                    {/* GPS Location Errors */}
+                    {geoError && (
+                      <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-[11px] text-red-200 mb-2">
+                        <span className="font-bold text-red-400">⚠ Location Error:</span> {geoError}
+                      </div>
+                    )}
+
+                    {/* Branch Range Check Banner */}
+                    {deliveryStatus && !deliveryChecking && (
+                      <div className={`rounded-xl border p-3 text-[11px] font-semibold flex items-start gap-2 mb-2 ${
+                        deliveryStatus.available 
+                          ? 'bg-green-500/10 border-green-500/20 text-green-200' 
+                          : 'bg-red-500/10 border-red-500/20 text-red-200'
+                      }`}>
+                        <MapPin className={`h-4 w-4 shrink-0 mt-0.5 ${deliveryStatus.available ? 'text-green-400' : 'text-red-400'}`} />
+                        <div>
+                          <p className="font-bold text-[12px] mb-0.5">{deliveryStatus.available ? 'Delivery Available' : 'Delivery Out of Range'}</p>
+                          <p className="opacity-80 leading-relaxed">{deliveryStatus.message}</p>
+                          {deliveryStatus.available && (
+                            <p className="mt-1 text-[10px] text-cafe-gold font-bold">
+                              Delivery Charge: {deliveryStatus.fee > 0 ? `£ ${deliveryStatus.fee.toFixed(2)}` : 'FREE Delivery'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <input
                       type="text"
                       value={deliveryForm.recipient_name}
@@ -377,63 +668,66 @@ function CartDrawer({
                       placeholder="Phone number"
                       className="customer-input"
                     />
-                    <textarea
-                      value={deliveryForm.line1}
-                      onChange={(event) =>
-                        handleFieldChange("line1", event.target.value)
-                      }
-                      placeholder="Address line 1 *"
-                      rows={2}
-                      className="customer-textarea min-h-[80px]"
-                    />
-                    <input
-                      type="text"
-                      value={deliveryForm.line2}
-                      onChange={(event) =>
-                        handleFieldChange("line2", event.target.value)
-                      }
-                      placeholder="Address line 2"
-                      className="customer-input"
-                    />
-                    <input
-                      type="text"
-                      value={deliveryForm.landmark}
-                      onChange={(event) =>
-                        handleFieldChange("landmark", event.target.value)
-                      }
-                      placeholder="Landmark"
-                      className="customer-input"
-                    />
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <input
-                        type="text"
-                        value={deliveryForm.city}
-                        onChange={(event) =>
-                          handleFieldChange("city", event.target.value)
-                        }
-                        placeholder="City *"
-                        className="customer-input"
-                      />
-                      <input
-                        type="text"
-                        value={deliveryForm.state}
-                        onChange={(event) =>
-                          handleFieldChange("state", event.target.value)
-                        }
-                        placeholder="State"
-                        className="customer-input"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={deliveryForm.pincode}
-                      onChange={(event) =>
-                        handleFieldChange("pincode", event.target.value)
-                      }
-                      placeholder="Pincode *"
-                      className="customer-input"
-                    />
-                  </>
+                    {(addressMethod === "manual" || deliveryForm.line1) ? (
+                      <>
+                        <textarea
+                          value={deliveryForm.line1}
+                          onChange={(event) =>
+                            handleFieldChange("line1", event.target.value)
+                          }
+                          placeholder="Address line 1 *"
+                          rows={2}
+                          className="customer-textarea min-h-[80px]"
+                        />
+                        <input
+                          type="text"
+                          value={deliveryForm.line2}
+                          onChange={(event) =>
+                            handleFieldChange("line2", event.target.value)
+                          }
+                          placeholder="Address line 2"
+                          className="customer-input"
+                        />
+                        <input
+                          type="text"
+                          value={deliveryForm.landmark}
+                          onChange={(event) =>
+                            handleFieldChange("landmark", event.target.value)
+                          }
+                          placeholder="Landmark"
+                          className="customer-input"
+                        />
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <input
+                            type="text"
+                            value={deliveryForm.city}
+                            onChange={(event) =>
+                              handleFieldChange("city", event.target.value)
+                            }
+                            placeholder="City *"
+                            className="customer-input"
+                          />
+                          <input
+                            type="text"
+                            value={deliveryForm.state}
+                            onChange={(event) =>
+                              handleFieldChange("state", event.target.value)
+                            }
+                            placeholder="State"
+                            className="customer-input"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          value={deliveryForm.pincode}
+                          onChange={(event) =>
+                            handleFieldChange("pincode", event.target.value)
+                          }
+                          placeholder="Pincode *"
+                          className="customer-input"
+                        />
+                      </>
+                    ) : null}
                 ) : null}
 
                 <label className="text-sm font-semibold text-white/80 mt-4 block">
@@ -501,11 +795,23 @@ function CartDrawer({
 
         {cart.length > 0 ? (
           <div className="border-t border-white/5 bg-[#110e0d] pb-2 pt-5">
-            <div className="mb-5 flex items-center justify-between">
-              <span className="font-sans text-sm uppercase tracking-wider text-white/60">Total Amount</span>
-              <span className="font-serif text-[26px] font-bold text-cafe-gold">
-                Rs {total.toFixed(2)}
-              </span>
+            <div className="mb-4 space-y-1.5 px-1">
+              <div className="flex items-center justify-between text-xs text-white/50">
+                <span>Subtotal</span>
+                <span>Rs {total.toFixed(2)}</span>
+              </div>
+              {orderType === "delivery" && (
+                <div className="flex items-center justify-between text-xs text-white/50">
+                  <span>Delivery Fee</span>
+                  <span>{deliveryForm.delivery_fee > 0 ? `Rs ${Number(deliveryForm.delivery_fee).toFixed(2)}` : "Free"}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                <span className="font-sans text-sm uppercase tracking-wider text-white/80 font-bold">Total Amount</span>
+                <span className="font-serif text-[24px] font-bold text-cafe-gold">
+                  Rs {(total + (orderType === "delivery" ? Number(deliveryForm.delivery_fee || 0) : 0)).toFixed(2)}
+                </span>
+              </div>
             </div>
             {errorMessage ? (
               <div className="mb-3 rounded-xl border border-red-500/25 bg-red-500/10 px-[14px] py-3 text-[13px] text-red-200">

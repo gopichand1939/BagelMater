@@ -302,6 +302,9 @@ const updateRestaurantSettings = async (req, res) => {
       weekly_schedule,
       special_dates,
       timezone_name,
+      address,
+      latitude,
+      longitude,
     } = req.body;
 
     if (!institution_name || !restaurant_name) {
@@ -353,6 +356,9 @@ const updateRestaurantSettings = async (req, res) => {
       weeklySchedule: normalizedWeeklySchedule,
       specialDates: normalizedSpecialDates,
       timezoneName: timezone_name ? String(timezone_name).trim() : "Asia/Kolkata",
+      address: typeof address === "string" ? address.trim() : "",
+      latitude: latitude !== null && typeof latitude !== "undefined" && latitude !== "" ? Number(latitude) : null,
+      longitude: longitude !== null && typeof longitude !== "undefined" && longitude !== "" ? Number(longitude) : null,
     });
 
     return res.status(200).json({

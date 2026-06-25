@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuSave } from "react-icons/lu";
+import { LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuSave, LuCompass, LuMapPin } from "react-icons/lu";
 import { toast } from "react-toastify";
+import { useGeolocation } from "../../hooks/useGeolocation";
 import { RESTAURANT_SETTINGS } from "../../Utils/Constant";
 import fetchWithRefreshToken from "../../Utils/fetchWithRefreshToken";
 import PageHeader from "../common/PageHeader";
@@ -122,7 +123,27 @@ function RestaurantTimings() {
     availability_mode: "schedule",
     weekly_schedule: normalizeSchedule(DEFAULT_WEEKLY_SCHEDULE),
     special_dates: {},
+    address: "",
+    latitude: "",
+    longitude: "",
   });
+  const [locationMethod, setLocationMethod] = useState("manual");
+  const { loading: geoLoading, error: geoError, detectLocation } = useGeolocation();
+
+  const handleDetectLocation = async () => {
+    try {
+      const data = await detectLocation();
+      setForm((current) => ({
+        ...current,
+        address: data.fullAddress || current.address,
+        latitude: data.latitude !== null ? String(data.latitude) : "",
+        longitude: data.longitude !== null ? String(data.longitude) : "",
+      }));
+      toast.success("Location successfully detected!");
+    } catch (err) {
+      toast.error(err.message || "Failed to detect current location.");
+    }
+  };
   const [statusInfo, setStatusInfo] = useState({
     current_status: 0,
     current_status_source: "weekly schedule",
@@ -148,7 +169,13 @@ function RestaurantTimings() {
       availability_mode: getAvailabilityMode(settings),
       weekly_schedule: normalizeSchedule(settings?.weekly_schedule || DEFAULT_WEEKLY_SCHEDULE),
       special_dates: normalizeSpecialDates(settings?.special_dates),
+      address: settings?.address || "",
+      latitude: settings?.latitude !== null && settings?.latitude !== undefined ? String(settings.latitude) : "",
+      longitude: settings?.longitude !== null && settings?.longitude !== undefined ? String(settings.longitude) : "",
     });
+
+    const hasCoords = settings?.latitude !== null && settings?.latitude !== undefined && settings?.latitude !== "";
+    setLocationMethod(hasCoords ? "manual" : "gps");
 
     setStatusInfo({
       current_status: Number(settings?.current_status) === 1 ? 1 : 0,
@@ -317,6 +344,21 @@ function RestaurantTimings() {
     event.preventDefault();
     setIsSaving(true);
 
+    // Validate coordinates
+    const latNum = form.latitude !== "" ? Number(form.latitude) : null;
+    const lonNum = form.longitude !== "" ? Number(form.longitude) : null;
+
+    if (latNum !== null && (isNaN(latNum) || latNum < -90 || latNum > 90)) {
+      toast.error("Latitude must be a valid number between -90 and 90.");
+      setIsSaving(false);
+      return;
+    }
+    if (lonNum !== null && (isNaN(lonNum) || lonNum < -180 || lonNum > 180)) {
+      toast.error("Longitude must be a valid number between -180 and 180.");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const manualFields = modeToManualFields(form.availability_mode);
       const response = await fetchWithRefreshToken(RESTAURANT_SETTINGS, {
@@ -329,6 +371,9 @@ function RestaurantTimings() {
           ...manualFields,
           weekly_schedule: form.weekly_schedule,
           special_dates: form.special_dates,
+          address: form.address.trim(),
+          latitude: latNum,
+          longitude: lonNum,
         }),
       });
 
@@ -702,6 +747,127 @@ function RestaurantTimings() {
               <span className="text-[0.92rem] text-slate-700">{selectedSummary.detail}</span>
             </div>
           </aside>
+        </section>
+
+        {/* Cafe Address section */}
+        <section className="grid gap-4 rounded-[8px] border border-slate-200 bg-white p-[18px]">
+          <div className="grid gap-1">
+            <strong className="text-slate-900">Cafe Address & Location</strong>
+            <span className="text-[0.9rem] text-slate-500">
+              Set the physical location and coordinates of the cafe.
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 mt-2">
+            <label className="flex min-h-[44px] items-center gap-3 rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-800 cursor-pointer">
+              <input
+                type="radio"
+                name="location_method"
+                value="gps"
+                checked={locationMethod === "gps"}
+                onChange={() => setLocationMethod("gps")}
+                className="h-4 w-4 accent-orange-500"
+              />
+              <span className="flex items-center gap-2">
+                <LuCompass className="text-slate-500 h-5 w-5" />
+                Use Current Location
+              </span>
+            </label>
+
+            <label className="flex min-h-[44px] items-center gap-3 rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-800 cursor-pointer">
+              <input
+                type="radio"
+                name="location_method"
+                value="manual"
+                checked={locationMethod === "manual"}
+                onChange={() => setLocationMethod("manual")}
+                className="h-4 w-4 accent-orange-500"
+              />
+              <span className="flex items-center gap-2">
+                <LuMapPin className="text-slate-500 h-5 w-5" />
+                Enter Address Manually
+              </span>
+            </label>
+          </div>
+
+          {locationMethod === "gps" && (
+            <div className="mt-2 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleDetectLocation}
+                disabled={geoLoading}
+                className="inline-flex w-fit items-center gap-2 rounded-[8px] border-0 bg-slate-800 hover:bg-slate-900 px-4 py-2.5 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {geoLoading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white" />
+                    Detecting Location...
+                  </>
+                ) : (
+                  <>
+                    <LuCompass className="h-4 w-4" />
+                    Get Location from Browser GPS
+                  </>
+                )}
+              </button>
+              {geoError && (
+                <div className="rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-[0.92rem] font-semibold text-red-700">
+                  {geoError}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid gap-4 mt-2">
+            <div className="grid gap-1.5">
+              <label htmlFor="cafe_address" className="text-sm font-semibold text-slate-700">
+                Physical Address
+              </label>
+              <textarea
+                id="cafe_address"
+                rows={3}
+                value={form.address}
+                onChange={(e) => setFieldValue("address", e.target.value)}
+                disabled={locationMethod === "gps" && geoLoading}
+                placeholder="Enter complete physical address of the cafe..."
+                className="w-full rounded-[8px] border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-orange-500 disabled:bg-slate-100 disabled:text-slate-500"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <label htmlFor="cafe_latitude" className="text-sm font-semibold text-slate-700">
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  id="cafe_latitude"
+                  value={form.latitude}
+                  onChange={(e) => setFieldValue("latitude", e.target.value)}
+                  disabled={locationMethod === "gps"}
+                  placeholder="e.g. 51.5074"
+                  className="w-full rounded-[8px] border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-orange-500 disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </div>
+
+              <div className="grid gap-1.5">
+                <label htmlFor="cafe_longitude" className="text-sm font-semibold text-slate-700">
+                  Longitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  id="cafe_longitude"
+                  value={form.longitude}
+                  onChange={(e) => setFieldValue("longitude", e.target.value)}
+                  disabled={locationMethod === "gps"}
+                  placeholder="e.g. -0.1278"
+                  className="w-full rounded-[8px] border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-orange-500 disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </div>
+            </div>
+          </div>
         </section>
       </form>
     </div>

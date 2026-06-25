@@ -54,6 +54,7 @@ export const CUSTOMER_NOTIFICATION_MARK_READ = `${API_BASE_URL}/notifications/ma
 export const CUSTOMER_NOTIFICATION_MARK_ALL_READ = `${API_BASE_URL}/notifications/mark-all-as-read`;
 export const CUSTOMER_NOTIFICATION_UNREAD_SUMMARY = `${API_BASE_URL}/notifications/unread-summary`;
 export const RESTAURANT_SETTINGS = `${API_BASE_URL}/restaurant/settings`;
+export const CUSTOMER_NEAREST_OUTLET = `${API_BASE_URL}/delivery-charges/nearest`;
 export const MENU_UPDATES_WS_URL =
   trimTrailingSlash(import.meta.env.VITE_MENU_UPDATES_WS_URL) ||
   toWebSocketUrlFromApiBase(API_BASE_URL) ||
