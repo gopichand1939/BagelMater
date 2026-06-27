@@ -49,6 +49,7 @@ const DeleteCustomer = lazy(() => import("../components/customer/DeleteCustomer"
 
 // Orders Module
 const Order = lazy(() => import("../components/Orders/Order"));
+const ScheduledOrder = lazy(() => import("../components/Orders/ScheduledOrder"));
 const AddOrder = lazy(() => import("../components/Orders/AddOrder"));
 const ViewOrder = lazy(() => import("../components/Orders/ViewOrder"));
 const EditOrder = lazy(() => import("../components/Orders/EditOrder"));
@@ -106,6 +107,10 @@ export const appRoutes = [
       {
         path: "orders",
         element: withSuspense(<Order />),
+      },
+      {
+        path: "scheduled-orders",
+        element: withSuspense(<ScheduledOrder />),
       },
       {
         path: "payments",

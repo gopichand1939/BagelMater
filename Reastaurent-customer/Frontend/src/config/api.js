@@ -42,6 +42,7 @@ export const CUSTOMER_CHANGE_PASSWORD = `${API_BASE_URL}/auth/change-password`;
 export const CUSTOMER_PROFILE = `${API_BASE_URL}/customer/profile`;
 export const CUSTOMER_UPDATE_PROFILE = `${API_BASE_URL}/customer/update-profile`;
 export const CUSTOMER_PLACE_ORDER = `${API_BASE_URL}/orders/place-order`;
+export const CUSTOMER_PLACE_SCHEDULED_ORDER = `${API_BASE_URL}/scheduled-orders/place-order`;
 export const CUSTOMER_MY_ORDERS = `${API_BASE_URL}/orders/my-orders`;
 export const CUSTOMER_ORDER_DETAILS = `${API_BASE_URL}/orders/order-details`;
 export const CUSTOMER_CREATE_PAYMENT_INTENT = `${API_BASE_URL}/payments/create-payment-intent`;

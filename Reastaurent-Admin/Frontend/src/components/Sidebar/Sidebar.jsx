@@ -356,6 +356,7 @@ const iconMap = {
   "menu-management": MenuManagementIcon,
   menu_management: MenuManagementIcon,
   orders: OrdersIcon,
+  scheduled_orders: OrdersIcon,
   payments: PaymentsIcon,
   reports: ReportsIcon,
   customers: CustomersIcon,

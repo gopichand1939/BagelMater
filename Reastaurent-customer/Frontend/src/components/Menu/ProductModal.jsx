@@ -10,15 +10,15 @@ export default function ProductModal({ item, addons, loading, onClose, onConfirm
   }, [item?.id]);
 
   const groupedAddons = useMemo(() => {
-    return addons.reduce((groups, addon) => {
+    const map = new Map();
+    addons.forEach((addon) => {
       const groupName = addon.addon_group || addon.title || "Add-ons";
-
-      if (!groups[groupName]) {
-        groups[groupName] = [];
+      if (!map.has(groupName)) {
+        map.set(groupName, []);
       }
-      groups[groupName].push(addon);
-      return groups;
-    }, {});
+      map.get(groupName).push(addon);
+    });
+    return Array.from(map.entries());
   }, [addons]);
 
   const basePrice =
@@ -160,7 +160,7 @@ export default function ProductModal({ item, addons, loading, onClose, onConfirm
               <div className="space-y-8">
                 <div >
                   <h4 className="text-xl font-serif font-bold text-white mb-6">Customize Your Order</h4>
-                  {Object.entries(groupedAddons).map(([groupName, groupAddons]) => (
+                  {groupedAddons.map(([groupName, groupAddons]) => (
                     <div key={groupName} className="mb-6 last:mb-0">
                       <h5 className="text-sm font-bold text-white/80 uppercase tracking-wider mb-4">{groupName}</h5>
                       <div className="grid gap-3">

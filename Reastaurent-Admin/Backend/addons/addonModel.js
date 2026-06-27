@@ -96,6 +96,14 @@ const addonModel = {
         )
       ON CONFLICT DO NOTHING;
     `);
+    await db.query(`
+      ALTER TABLE addons_eligible_for_items
+      ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+    `);
+    await db.query(`
+      ALTER TABLE addons_eligible_item_options
+      ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+    `);
     await addonModel.migrateLegacyAddons();
   },
 
@@ -494,10 +502,12 @@ const addonModel = {
           items.category_id,
           category.category_name
         FROM items
-        LEFT JOIN category ON category.id = items.category_id
+        INNER JOIN category ON category.id = items.category_id
         WHERE items.is_deleted = 0
           AND items.is_active = 1
-        ORDER BY category.category_name ASC NULLS LAST, items.item_name ASC;
+          AND category.is_deleted = 0
+          AND category.is_active = 1
+        ORDER BY category.category_name ASC, items.item_name ASC;
       `
     );
     return result.rows;
@@ -524,11 +534,15 @@ const addonModel = {
       const result = await client.query(
         `
           INSERT INTO addons_eligible_for_items
-          (item_id, group_id, is_required, is_active)
-          SELECT $1, $2, $3, $4
+          (item_id, group_id, is_required, is_active, is_deleted)
+          SELECT $1, $2, $3, $4, 0
           WHERE EXISTS (SELECT 1 FROM items WHERE id = $1 AND is_deleted = 0)
             AND EXISTS (SELECT 1 FROM addon_group_master WHERE id = $2 AND is_deleted = 0)
-          ON CONFLICT DO NOTHING
+          ON CONFLICT (item_id, group_id) WHERE (is_deleted = 0) DO UPDATE SET
+            is_deleted = 0,
+            is_active = EXCLUDED.is_active,
+            is_required = EXCLUDED.is_required,
+            updated_at = CURRENT_TIMESTAMP
           RETURNING *;
         `,
         [item_id, group_id, is_required, is_active]
@@ -857,11 +871,13 @@ const addonModel = {
           aefi.item_id,
           aefi.group_id,
           aefi.is_required,
+          aefi.sort_order AS group_sort_order,
           ag.group_name,
           aim.id AS addon_item_id,
           aim.addon_item_name,
           aim.price,
-          aim.description
+          aim.description,
+          aeio.sort_order AS item_sort_order
         FROM addons_eligible_for_items aefi
         INNER JOIN addon_group_master ag ON ag.id = aefi.group_id
         INNER JOIN addons_eligible_item_options aeio ON aeio.eligibility_id = aefi.id
@@ -870,16 +886,65 @@ const addonModel = {
          AND aim.group_id = ag.id
         WHERE aefi.item_id = $1
           AND aefi.is_deleted = 0
-          AND aefi.is_active = 1
           AND ag.is_deleted = 0
           AND ag.is_active = 1
           AND aim.is_deleted = 0
           AND aim.is_active = 1
-        ORDER BY ag.group_name ASC, aim.addon_item_name ASC;
+        ORDER BY aefi.sort_order ASC, aefi.id ASC, aeio.sort_order ASC, aeio.id ASC;
       `,
       [itemId]
     );
     return result.rows;
+  },
+
+  reorderAddonGroups: async (itemId, orderedGroupIds) => {
+    const client = await db.pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (let i = 0; i < orderedGroupIds.length; i++) {
+        const groupId = Number(orderedGroupIds[i]);
+        await client.query(
+          `
+            UPDATE addons_eligible_for_items
+            SET sort_order = $3, updated_at = CURRENT_TIMESTAMP
+            WHERE item_id = $1 AND group_id = $2 AND is_deleted = 0;
+          `,
+          [itemId, groupId, i]
+        );
+      }
+      await client.query("COMMIT");
+      return true;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+
+  reorderAddonItems: async (eligibilityId, orderedAddonItemIds) => {
+    const client = await db.pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (let i = 0; i < orderedAddonItemIds.length; i++) {
+        const addonItemId = Number(orderedAddonItemIds[i]);
+        await client.query(
+          `
+            UPDATE addons_eligible_item_options
+            SET sort_order = $3
+            WHERE eligibility_id = $1 AND addon_item_id = $2;
+          `,
+          [eligibilityId, addonItemId, i]
+        );
+      }
+      await client.query("COMMIT");
+      return true;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   },
 };
 

@@ -81,6 +81,8 @@ export const ADDON_ELIGIBILITY_BY_ID = `${BACKEND_BASE_URL}/addons/get_addon_eli
 export const ADDON_ELIGIBILITY_UPDATE = `${BACKEND_BASE_URL}/addons/update_addon_eligibility`;
 export const ADDON_ELIGIBILITY_DELETE = `${BACKEND_BASE_URL}/addons/delete_addon_eligibility`;
 export const ADDON_BY_ITEM = `${BACKEND_BASE_URL}/addons/get_addons_by_item`;
+export const ADDON_ELIGIBILITY_REORDER_GROUPS = `${BACKEND_BASE_URL}/addons/reorder_addon_groups`;
+export const ADDON_ELIGIBILITY_REORDER_ITEMS = `${BACKEND_BASE_URL}/addons/reorder_addon_items`;
 
 
 
@@ -117,6 +119,10 @@ export const ORDER_LIST = `${BACKEND_BASE_URL}/orders/order_list`;
 export const ORDER_BY_ID = `${BACKEND_BASE_URL}/orders/get_order_byId`;
 export const ORDER_UPDATE_STATUS = `${BACKEND_BASE_URL}/orders/update_order_status`;
 export const ORDER_DELETE = `${BACKEND_BASE_URL}/orders/delete_order`;
+
+export const SCHEDULED_ORDER_LIST = `${BACKEND_BASE_URL}/scheduled-orders/order_list`;
+export const SCHEDULED_ORDER_BY_ID = `${BACKEND_BASE_URL}/scheduled-orders/get_order_byId`;
+export const SCHEDULED_ORDER_UPDATE = `${BACKEND_BASE_URL}/scheduled-orders/update_order`;
 
 export const PAYMENT_LIST = `${BACKEND_BASE_URL}/payments/payment_list`;
 export const PAYMENT_BY_ID = `${BACKEND_BASE_URL}/payments/get_payment_byId`;

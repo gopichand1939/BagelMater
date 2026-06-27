@@ -27,6 +27,9 @@ const toOrderRealtimePayload = (order) =>
         payment_method: order.payment_method,
         total_amount: order.total_amount,
         item_count: order.item_count,
+        order_type: order.order_type,
+        scheduled_datetime: order.scheduled_datetime,
+        scheduled_slot: order.scheduled_slot,
         created_at: order.created_at,
         updated_at: order.updated_at,
       }
@@ -42,6 +45,9 @@ const placeOrder = async (req, res) => {
       currency_code = "INR",
       tax_amount = 0,
       delivery_fee = 0,
+      order_type = "ASAP",
+      scheduled_datetime = null,
+      scheduled_slot = null,
     } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -244,6 +250,9 @@ const placeOrder = async (req, res) => {
       taxAmount: normalizedTaxAmount,
       deliveryFee: normalizedDeliveryFee,
       totalAmount,
+      orderType: order_type,
+      scheduledDatetime: scheduled_datetime,
+      scheduledSlot: scheduled_slot,
     });
 
     await publishOrderChangeSafely({

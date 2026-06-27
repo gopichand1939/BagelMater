@@ -333,11 +333,13 @@ const getItemAddons = async (req, res) => {
         aefi.item_id,
         aefi.group_id,
         aefi.is_required,
+        aefi.sort_order AS group_sort_order,
         ag.group_name,
         aim.id AS addon_item_id,
         aim.addon_item_name,
         aim.price,
-        aim.description
+        aim.description,
+        aeio.sort_order AS item_sort_order
       FROM addons_eligible_for_items aefi
       INNER JOIN addon_group_master ag
         ON ag.id = aefi.group_id
@@ -353,24 +355,30 @@ const getItemAddons = async (req, res) => {
         AND ag.is_active = 1
         AND aim.is_deleted = 0
         AND aim.is_active = 1
-      ORDER BY ag.group_name ASC, aim.addon_item_name ASC
+      ORDER BY aefi.sort_order ASC, aefi.id ASC, aeio.sort_order ASC, aeio.id ASC
     `;
     const addonsResult = await db.query(addonsQuery, [normalizedItemId]);
     const totalRecords = addonsResult.rowCount || 0;
 
-    const groupedMap = addonsResult.rows.reduce((acc, addon) => {
-      if (!acc[addon.group_id]) {
-        acc[addon.group_id] = {
+    const groupsList = [];
+    const groupMap = new Map();
+
+    for (const addon of addonsResult.rows) {
+      const groupId = addon.group_id;
+      if (!groupMap.has(groupId)) {
+        const groupObj = {
           id: addon.eligibility_id,
-          group_id: addon.group_id,
+          group_id: groupId,
           addon_group: addon.group_name,
           title: addon.group_name,
           is_required: Number(addon.is_required) === 1,
           options: [],
         };
+        groupMap.set(groupId, groupObj);
+        groupsList.push(groupObj);
       }
 
-      acc[addon.group_id].options.push({
+      groupMap.get(groupId).options.push({
         id: addon.addon_item_id,
         addonOptionId: addon.addon_item_id,
         addon_name: addon.addon_item_name,
@@ -379,14 +387,12 @@ const getItemAddons = async (req, res) => {
         price: Number(addon.price || 0),
         description: addon.description,
       });
-
-      return acc;
-    }, {});
+    }
 
     const responseData = {
       success: true,
       message: "Add-on list fetched successfully",
-      data: Object.values(groupedMap),
+      data: groupsList,
       pagination: {
         totalRecords,
         totalPages: totalRecords > 0 ? 1 : 0,

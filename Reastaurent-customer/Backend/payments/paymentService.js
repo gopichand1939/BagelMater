@@ -238,6 +238,9 @@ const buildOrderDraftForCheckout = async ({
   currencyCode = "INR",
   taxAmount = 0,
   deliveryFee = 0,
+  orderType = "ASAP",
+  scheduledDatetime = null,
+  scheduledSlot = null,
 }) => {
   if (!Array.isArray(items) || items.length === 0) {
     const error = new Error("At least one order item is required");
@@ -426,6 +429,9 @@ const buildOrderDraftForCheckout = async ({
     taxAmount: normalizedTaxAmount,
     deliveryFee: normalizedDeliveryFee,
     totalAmount,
+    orderType,
+    scheduledDatetime: scheduledDatetime ? new Date(scheduledDatetime) : null,
+    scheduledSlot,
   };
 };
 
@@ -523,6 +529,9 @@ const createCheckoutSession = async ({
       currencyCode: checkoutPayload.currency_code,
       taxAmount: checkoutPayload.tax_amount,
       deliveryFee: checkoutPayload.delivery_fee,
+      orderType: checkoutPayload.order_type,
+      scheduledDatetime: checkoutPayload.scheduled_datetime,
+      scheduledSlot: checkoutPayload.scheduled_slot,
     });
     payableAmount = orderDraft.totalAmount;
   } else {

@@ -74,6 +74,10 @@ const MENU_ROUTE_MAP = {
     path: "/orders",
     matchPaths: ["/orders", "/addorder", "/vieworder/", "/editorder/", "/deleteorder/"],
   },
+  scheduled_orders: {
+    path: "/scheduled-orders",
+    matchPaths: ["/scheduled-orders"],
+  },
   payments: {
     path: "/payments",
     matchPaths: ["/payments", "/viewpayment/"],

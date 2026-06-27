@@ -328,16 +328,20 @@ function Home() {
       return;
     }
 
-    if (payload.entity === "addon") {
-      const nextAddonState = applyAddonChange({
-        addonCache: addonCacheRef.current,
-        selectedItem: selectedItemRef.current,
-        selectedItemAddons: selectedItemAddonsRef.current,
-        change: payload,
-      });
-
-      setAddonCache(nextAddonState.addonCache);
-      setSelectedItemAddons(nextAddonState.selectedItemAddons);
+    if (payload.entity === "addon" || payload.entity === "addon_eligibility" || payload.entity === "addon_item") {
+      const itemId = Number(payload.itemId || payload.entityData?.item_id);
+      if (itemId) {
+        setAddonCache((prev) => {
+          const next = { ...prev };
+          delete next[itemId];
+          return next;
+        });
+        if (selectedItemRef.current && Number(selectedItemRef.current.id) === itemId) {
+          void loadAddonsForItem(selectedItemRef.current, { useCache: false, openModal: false });
+        }
+      } else {
+        setAddonCache({});
+      }
     }
   });
 

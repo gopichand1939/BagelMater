@@ -19,6 +19,8 @@ const {
   updateEligibility,
   deleteEligibility,
   getAddonsByItem,
+  reorderAddonGroups,
+  reorderAddonItems,
 } = require("./AddonController");
 
 const router = express.Router();
@@ -45,5 +47,7 @@ router.post("/update_addon_eligibility", updateEligibility);
 router.post("/delete_addon_eligibility", deleteEligibility);
 
 router.post("/get_addons_by_item", getAddonsByItem);
+router.post("/reorder_addon_groups", reorderAddonGroups);
+router.post("/reorder_addon_items", reorderAddonItems);
 
 module.exports = router;

@@ -14,6 +14,7 @@ const restaurantSettingsRoutes = require("./restaurant/restaurantSettingsRoutes"
 const restaurantSettingsModel = require("./restaurant/restaurantSettingsModel");
 const customerRoutes = require("./customer/customerRoutes");
 const orderRoutes = require("./orders/orderRoutes");
+const scheduledOrderRoutes = require("./scheduled_orders/scheduledOrderRoutes");
 const paymentRoutes = require("./payments/paymentRoutes");
 const notificationRoutes = require("./notifications/notificationRoutes");
 const messageRoutes = require("./messages/messageRoutes");
@@ -86,6 +87,7 @@ app.use("/admin", adminRoutes);
 app.use("/restaurant", restaurantSettingsRoutes);
 app.use("/customer", customerRoutes);
 app.use("/orders", orderRoutes);
+app.use("/scheduled-orders", scheduledOrderRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/messages", messageRoutes);

@@ -2,6 +2,7 @@ import {
   CUSTOMER_MY_ORDERS,
   CUSTOMER_ORDER_DETAILS,
   CUSTOMER_PLACE_ORDER,
+  CUSTOMER_PLACE_SCHEDULED_ORDER,
 } from "../Utils/Constant";
 
 const parseJsonResponse = async (response) => {
@@ -30,6 +31,11 @@ const authorizedPost = async (url, payload, accessToken) => {
 
 export const placeCustomerOrder = async (payload, accessToken) => {
   const result = await authorizedPost(CUSTOMER_PLACE_ORDER, payload, accessToken);
+  return result.data;
+};
+
+export const placeCustomerScheduledOrder = async (payload, accessToken) => {
+  const result = await authorizedPost(CUSTOMER_PLACE_SCHEDULED_ORDER, payload, accessToken);
   return result.data;
 };
 

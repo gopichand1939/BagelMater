@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { customerAuthStorage } from "../../auth/customerAuthStorage";
 import { getImageUrl } from "../../Utils/imageUrl";
-import { placeCustomerOrder } from "../../services/orderApi";
+import { placeCustomerOrder, placeCustomerScheduledOrder } from "../../services/orderApi";
 import { createCustomerCheckoutSession } from "../../services/paymentApi";
 import {
   STRIPE_MIN_INR_AMOUNT,
@@ -191,6 +191,8 @@ export default function CartPage() {
   const [stripeLoading, setStripeLoading] = useState(false);
   const [orderType, setOrderType] = useState("collection");
   const [scheduledTime, setScheduledTime] = useState("");
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledSlot, setScheduledSlot] = useState("");
   const [checkoutResult, setCheckoutResult] = useState({ status: "idle", message: "", order: null });
 
   const [editingItemKey, setEditingItemKey] = useState(null);
@@ -329,7 +331,7 @@ export default function CartPage() {
       return;
     }
 
-    if (!cafeOpen && !scheduledTime) {
+    if (!cafeOpen && !isScheduled) {
       setErrorMessage("The cafe is currently closed. Please select a future time slot for a scheduled order.");
       setSuccessMessage("");
       return;
@@ -366,8 +368,9 @@ export default function CartPage() {
           selected_addons: item.selected_addons || [],
           item_notes: item.item_notes || "",
         })),
-        order_type: orderType,
-        scheduled_time: scheduledTime || null,
+        order_type: isScheduled ? "SCHEDULED" : "ASAP",
+        scheduled_datetime: isScheduled ? scheduledTime : null,
+        scheduled_slot: isScheduled ? scheduledSlot : null,
         delivery_address: orderType === "delivery" ? {
           recipient_name: deliveryForm.recipient_name.trim(),
           phone: deliveryForm.phone.trim(),
@@ -383,6 +386,8 @@ export default function CartPage() {
         } : null,
         delivery_fee: orderType === "delivery" ? Number(deliveryForm.delivery_fee || 0) : 0,
         order_notes: orderNotes.trim(),
+        tax_amount: 0,
+        totalAmount: total + (orderType === "delivery" ? Number(deliveryForm.delivery_fee || 0) : 0),
       };
 
       if (paymentMethod === "stripe") {
@@ -410,10 +415,15 @@ export default function CartPage() {
         return;
       }
 
-      const order = await placeCustomerOrder(
-        { ...checkoutPayload, payment_method: paymentMethod },
-        accessToken
-      );
+      const order = isScheduled
+        ? await placeCustomerScheduledOrder(
+            { ...checkoutPayload, payment_method: paymentMethod },
+            accessToken
+          )
+        : await placeCustomerOrder(
+            { ...checkoutPayload, payment_method: paymentMethod },
+            accessToken
+          );
 
       setCheckoutResult({
         status: "success",
@@ -555,7 +565,90 @@ export default function CartPage() {
 
                 <div>
                   <label className="text-sm font-bold text-white/80 mb-2 block">Scheduled Time (Optional)</label>
-                  <input type="datetime-local" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cafe-gold transition-colors text-sm" />
+                  <input
+                    type="datetime-local"
+                    value={scheduledTime}
+                    onChange={(e) => {
+                      setScheduledTime(e.target.value);
+                      setIsScheduled(!!e.target.value);
+                    }}
+                    onClick={(e) => {
+                      try {
+                        e.target.showPicker();
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cafe-gold transition-colors text-sm cursor-pointer"
+                  />
+                  {scheduledTime && (
+                    <div className="mt-3">
+                      <label className="text-xs font-bold text-white/70 mb-1.5 block">Select 15-Min Delivery/Pickup Slot</label>
+                      <select
+                        value={scheduledSlot}
+                        onChange={(e) => setScheduledSlot(e.target.value)}
+                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cafe-gold transition-colors text-sm"
+                      >
+                        <option value="08:00 AM - 08:15 AM">08:00 AM - 08:15 AM</option>
+                        <option value="08:15 AM - 08:30 AM">08:15 AM - 08:30 AM</option>
+                        <option value="08:30 AM - 08:45 AM">08:30 AM - 08:45 AM</option>
+                        <option value="08:45 AM - 09:00 AM">08:45 AM - 09:00 AM</option>
+                        <option value="09:00 AM - 09:15 AM">09:00 AM - 09:15 AM</option>
+                        <option value="09:15 AM - 09:30 AM">09:15 AM - 09:30 AM</option>
+                        <option value="09:30 AM - 09:45 AM">09:30 AM - 09:45 AM</option>
+                        <option value="09:45 AM - 10:00 AM">09:45 AM - 10:00 AM</option>
+                        <option value="10:00 AM - 10:15 AM">10:00 AM - 10:15 AM</option>
+                        <option value="10:15 AM - 10:30 AM">10:15 AM - 10:30 AM</option>
+                        <option value="10:30 AM - 10:45 AM">10:30 AM - 10:45 AM</option>
+                        <option value="10:45 AM - 11:00 AM">10:45 AM - 11:00 AM</option>
+                        <option value="11:00 AM - 11:15 AM">11:00 AM - 11:15 AM</option>
+                        <option value="11:15 AM - 11:30 AM">11:15 AM - 11:30 AM</option>
+                        <option value="11:30 AM - 11:45 AM">11:30 AM - 11:45 AM</option>
+                        <option value="11:45 AM - 12:00 PM">11:45 AM - 12:00 PM</option>
+                        <option value="12:00 PM - 12:15 PM">12:00 PM - 12:15 PM</option>
+                        <option value="12:15 PM - 12:30 PM">12:15 PM - 12:30 PM</option>
+                        <option value="12:30 PM - 12:45 PM">12:30 PM - 12:45 PM</option>
+                        <option value="12:45 PM - 01:00 PM">12:45 PM - 01:00 PM</option>
+                        <option value="01:00 PM - 01:15 PM">01:00 PM - 01:15 PM</option>
+                        <option value="01:15 PM - 01:30 PM">01:15 PM - 01:30 PM</option>
+                        <option value="01:30 PM - 01:45 PM">01:30 PM - 01:45 PM</option>
+                        <option value="01:45 PM - 02:00 PM">01:45 PM - 02:00 PM</option>
+                        <option value="02:00 PM - 02:15 PM">02:00 PM - 02:15 PM</option>
+                        <option value="02:15 PM - 02:30 PM">02:15 PM - 02:30 PM</option>
+                        <option value="02:30 PM - 02:45 PM">02:30 PM - 02:45 PM</option>
+                        <option value="02:45 PM - 03:00 PM">02:45 PM - 03:00 PM</option>
+                        <option value="03:00 PM - 03:15 PM">03:00 PM - 03:15 PM</option>
+                        <option value="03:15 PM - 03:30 PM">03:15 PM - 03:30 PM</option>
+                        <option value="03:30 PM - 03:45 PM">03:30 PM - 03:45 PM</option>
+                        <option value="03:45 PM - 04:00 PM">03:45 PM - 04:00 PM</option>
+                        <option value="04:00 PM - 04:15 PM">04:00 PM - 04:15 PM</option>
+                        <option value="04:15 PM - 04:30 PM">04:15 PM - 04:30 PM</option>
+                        <option value="04:30 PM - 04:45 PM">04:30 PM - 04:45 PM</option>
+                        <option value="04:45 PM - 05:00 PM">04:45 PM - 05:00 PM</option>
+                        <option value="05:00 PM - 05:15 PM">05:00 PM - 05:15 PM</option>
+                        <option value="05:15 PM - 05:30 PM">05:15 PM - 05:30 PM</option>
+                        <option value="05:30 PM - 05:45 PM">05:30 PM - 05:45 PM</option>
+                        <option value="05:45 PM - 06:00 PM">05:45 PM - 06:00 PM</option>
+                        <option value="06:00 PM - 06:15 PM">06:00 PM - 06:15 PM</option>
+                        <option value="06:15 PM - 06:30 PM">06:15 PM - 06:30 PM</option>
+                        <option value="06:30 PM - 06:45 PM">06:30 PM - 06:45 PM</option>
+                        <option value="06:45 PM - 07:00 PM">06:45 PM - 07:00 PM</option>
+                        <option value="07:00 PM - 07:15 PM">07:00 PM - 07:15 PM</option>
+                        <option value="07:15 PM - 07:30 PM">07:15 PM - 07:30 PM</option>
+                        <option value="07:30 PM - 07:45 PM">07:30 PM - 07:45 PM</option>
+                        <option value="07:45 PM - 08:00 PM">07:45 PM - 08:00 PM</option>
+                        <option value="08:00 PM - 08:15 PM">08:00 PM - 08:15 PM</option>
+                        <option value="08:15 PM - 08:30 PM">08:15 PM - 08:30 PM</option>
+                        <option value="08:30 PM - 08:45 PM">08:30 PM - 08:45 PM</option>
+                        <option value="08:45 PM - 09:00 PM">08:45 PM - 09:00 PM</option>
+                        <option value="09:00 PM - 09:15 PM">09:00 PM - 09:15 PM</option>
+                        <option value="09:15 PM - 09:30 PM">09:15 PM - 09:30 PM</option>
+                        <option value="09:30 PM - 09:45 PM">09:30 PM - 09:45 PM</option>
+                        <option value="09:45 PM - 10:00 PM">09:45 PM - 10:00 PM</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -750,6 +843,131 @@ export default function CartPage() {
                 </div>
 
                 <div className="space-y-4 mb-6">
+                  {/* Scheduling Section */}
+                  <div className="bg-black/40 border border-white/5 rounded-2xl p-4.5 space-y-3.5 mb-4">
+                    <label className="text-sm font-bold text-white/85 block">Order Timing</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScheduledTime("");
+                          setIsScheduled(false);
+                        }}
+                        className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all text-center ${
+                          !isScheduled
+                            ? "bg-cafe-gold text-[#110e0d] border-cafe-gold shadow-md font-black"
+                            : "bg-black/50 text-white/70 border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        ⚡ ASAP (Prepare Now)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsScheduled(true);
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          tomorrow.setHours(9, 0, 0, 0);
+                          const offset = tomorrow.getTimezoneOffset();
+                          const localTomorrow = new Date(tomorrow.getTime() - offset * 60 * 1000);
+                          setScheduledTime(localTomorrow.toISOString().slice(0, 16));
+                          if (!scheduledSlot) setScheduledSlot("09:00 AM - 09:15 AM");
+                        }}
+                        className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all text-center ${
+                          isScheduled
+                            ? "bg-cafe-gold text-[#110e0d] border-cafe-gold shadow-md font-black"
+                            : "bg-black/50 text-white/70 border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        📅 Schedule for Later
+                      </button>
+                    </div>
+
+                    {isScheduled && (
+                      <div className="bg-black/45 border border-white/10 rounded-xl p-3.5 space-y-3">
+                        <div>
+                          <label className="text-[10px] text-white/50 font-bold uppercase tracking-wider block mb-1.5">
+                            Select Date & Time
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={scheduledTime}
+                            onChange={(e) => setScheduledTime(e.target.value)}
+                            min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cafe-gold transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-white/50 font-bold uppercase tracking-wider block mb-1.5">
+                            Select Time Slot
+                          </label>
+                          <select
+                            value={scheduledSlot}
+                            onChange={(e) => setScheduledSlot(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cafe-gold transition-colors"
+                          >
+                            <option value="08:00 AM - 08:15 AM">08:00 AM - 08:15 AM</option>
+                            <option value="08:15 AM - 08:30 AM">08:15 AM - 08:30 AM</option>
+                            <option value="08:30 AM - 08:45 AM">08:30 AM - 08:45 AM</option>
+                            <option value="08:45 AM - 09:00 AM">08:45 AM - 09:00 AM</option>
+                            <option value="09:00 AM - 09:15 AM">09:00 AM - 09:15 AM</option>
+                            <option value="09:15 AM - 09:30 AM">09:15 AM - 09:30 AM</option>
+                            <option value="09:30 AM - 09:45 AM">09:30 AM - 09:45 AM</option>
+                            <option value="09:45 AM - 10:00 AM">09:45 AM - 10:00 AM</option>
+                            <option value="10:00 AM - 10:15 AM">10:00 AM - 10:15 AM</option>
+                            <option value="10:15 AM - 10:30 AM">10:15 AM - 10:30 AM</option>
+                            <option value="10:30 AM - 10:45 AM">10:30 AM - 10:45 AM</option>
+                            <option value="10:45 AM - 11:00 AM">10:45 AM - 11:00 AM</option>
+                            <option value="11:00 AM - 11:15 AM">11:00 AM - 11:15 AM</option>
+                            <option value="11:15 AM - 11:30 AM">11:15 AM - 11:30 AM</option>
+                            <option value="11:30 AM - 11:45 AM">11:30 AM - 11:45 AM</option>
+                            <option value="11:45 AM - 12:00 PM">11:45 AM - 12:00 PM</option>
+                            <option value="12:00 PM - 12:15 PM">12:00 PM - 12:15 PM</option>
+                            <option value="12:15 PM - 12:30 PM">12:15 PM - 12:30 PM</option>
+                            <option value="12:30 PM - 12:45 PM">12:30 PM - 12:45 PM</option>
+                            <option value="12:45 PM - 01:00 PM">12:45 PM - 01:00 PM</option>
+                            <option value="01:00 PM - 01:15 PM">01:00 PM - 01:15 PM</option>
+                            <option value="01:15 PM - 01:30 PM">01:15 PM - 01:30 PM</option>
+                            <option value="01:30 PM - 01:45 PM">01:30 PM - 01:45 PM</option>
+                            <option value="01:45 PM - 02:00 PM">01:45 PM - 02:00 PM</option>
+                            <option value="02:00 PM - 02:15 PM">02:00 PM - 02:15 PM</option>
+                            <option value="02:15 PM - 02:30 PM">02:15 PM - 02:30 PM</option>
+                            <option value="02:30 PM - 02:45 PM">02:30 PM - 02:45 PM</option>
+                            <option value="02:45 PM - 03:00 PM">02:45 PM - 03:00 PM</option>
+                            <option value="03:00 PM - 03:15 PM">03:00 PM - 03:15 PM</option>
+                            <option value="03:15 PM - 03:30 PM">03:15 PM - 03:30 PM</option>
+                            <option value="03:30 PM - 03:45 PM">03:30 PM - 03:45 PM</option>
+                            <option value="03:45 PM - 04:00 PM">03:45 PM - 04:00 PM</option>
+                            <option value="04:00 PM - 04:15 PM">04:00 PM - 04:15 PM</option>
+                            <option value="04:15 PM - 04:30 PM">04:15 PM - 04:30 PM</option>
+                            <option value="04:30 PM - 04:45 PM">04:30 PM - 04:45 PM</option>
+                            <option value="04:45 PM - 05:00 PM">04:45 PM - 05:00 PM</option>
+                            <option value="05:00 PM - 05:15 PM">05:00 PM - 05:15 PM</option>
+                            <option value="05:15 PM - 05:30 PM">05:15 PM - 05:30 PM</option>
+                            <option value="05:30 PM - 05:45 PM">05:30 PM - 05:45 PM</option>
+                            <option value="05:45 PM - 06:00 PM">05:45 PM - 06:00 PM</option>
+                            <option value="06:00 PM - 06:15 PM">06:00 PM - 06:15 PM</option>
+                            <option value="06:15 PM - 06:30 PM">06:15 PM - 06:30 PM</option>
+                            <option value="06:30 PM - 06:45 PM">06:30 PM - 06:45 PM</option>
+                            <option value="06:45 PM - 07:00 PM">06:45 PM - 07:00 PM</option>
+                            <option value="07:00 PM - 07:15 PM">07:00 PM - 07:15 PM</option>
+                            <option value="07:15 PM - 07:30 PM">07:15 PM - 07:30 PM</option>
+                            <option value="07:30 PM - 07:45 PM">07:30 PM - 07:45 PM</option>
+                            <option value="07:45 PM - 08:00 PM">07:45 PM - 08:00 PM</option>
+                            <option value="08:00 PM - 08:15 PM">08:00 PM - 08:15 PM</option>
+                            <option value="08:15 PM - 08:30 PM">08:15 PM - 08:30 PM</option>
+                            <option value="08:30 PM - 08:45 PM">08:30 PM - 08:45 PM</option>
+                            <option value="08:45 PM - 09:00 PM">08:45 PM - 09:00 PM</option>
+                            <option value="09:00 PM - 09:15 PM">09:00 PM - 09:15 PM</option>
+                            <option value="09:15 PM - 09:30 AM">09:15 PM - 09:30 PM</option>
+                            <option value="09:30 PM - 09:45 PM">09:30 PM - 09:45 PM</option>
+                            <option value="09:45 PM - 10:00 PM">09:45 PM - 10:00 PM</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="text-sm font-bold text-white/80 mb-2 block">Order Notes</label>
                     <textarea value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} placeholder="Any special requests (e.g. deliver at gate, no packaging)?" rows={2} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-cafe-gold transition-colors" />

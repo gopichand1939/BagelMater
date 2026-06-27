@@ -1,30 +1,7 @@
 const db = require("../config/db");
 
-// Self-healing DB check for scheduled order columns
-(async () => {
-  try {
-    await db.query(`
-      ALTER TABLE orders 
-      ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'ASAP';
-    `);
-    await db.query(`
-      ALTER TABLE orders 
-      ADD COLUMN IF NOT EXISTS scheduled_datetime TIMESTAMPTZ NULL;
-    `);
-    await db.query(`
-      ALTER TABLE orders 
-      ADD COLUMN IF NOT EXISTS scheduled_slot VARCHAR(50) NULL;
-    `);
-  } catch (e) {
-    console.error("⚠️ Schema update for scheduled orders columns failed in customer orderModel.js:", e.message);
-  }
-})();
-
 const normalizeOrder = (row) => {
-  if (!row) {
-    return null;
-  }
-
+  if (!row) return null;
   return {
     ...row,
     delivery_address: row.delivery_address || {},
@@ -35,43 +12,22 @@ const normalizeOrder = (row) => {
 
 const getActiveCustomerById = async (customerId) => {
   const query = `
-    SELECT
-      id,
-      name,
-      email,
-      phone,
-      is_active,
-      is_deleted
+    SELECT id, name, email, phone, is_active, is_deleted
     FROM customers
-    WHERE id = $1
-      AND is_deleted = 0
+    WHERE id = $1 AND is_deleted = 0
     LIMIT 1;
   `;
-
   const result = await db.query(query, [customerId]);
   return result.rows[0] || null;
 };
 
 const getActiveItemsByIds = async (itemIds) => {
   const query = `
-    SELECT
-      id,
-      category_id,
-      item_name,
-      item_description,
-      item_image,
-      price,
-      discount_price,
-      is_active,
-      is_deleted
+    SELECT id, category_id, item_name, item_description, item_image, price, discount_price, is_active, is_deleted
     FROM items
-    WHERE id = ANY($1::INT[])
-      AND is_deleted = 0
-      AND is_active = 1;
+    WHERE id = ANY($1::INT[]) AND is_deleted = 0 AND is_active = 1;
   `;
-
   const result = await db.query(query, [itemIds]);
-
   return result.rows.reduce((accumulator, item) => {
     accumulator[item.id] = item;
     return accumulator;
@@ -79,29 +35,14 @@ const getActiveItemsByIds = async (itemIds) => {
 };
 
 const getActiveAddonsByIds = async (addonIds) => {
-  if (!addonIds.length) {
-    return {};
-  }
-
+  if (!addonIds.length) return {};
   const query = `
-    SELECT
-      aim.id,
-      ag.group_name AS addon_group,
-      aim.addon_item_name AS addon_name,
-      aim.price AS addon_price,
-      aim.is_active,
-      aim.is_deleted
+    SELECT aim.id, aim.addon_item_name, aim.price, aim.is_active, aim.is_deleted, ag.group_name
     FROM addon_item_master aim
     INNER JOIN addon_group_master ag ON ag.id = aim.group_id
-    WHERE aim.id = ANY($1::INT[])
-      AND aim.is_deleted = 0
-      AND aim.is_active = 1
-      AND ag.is_deleted = 0
-      AND ag.is_active = 1;
+    WHERE aim.id = ANY($1::INT[]) AND aim.is_deleted = 0 AND aim.is_active = 1 AND ag.is_deleted = 0 AND ag.is_active = 1;
   `;
-
   const result = await db.query(query, [addonIds]);
-
   return result.rows.reduce((accumulator, addon) => {
     accumulator[addon.id] = addon;
     return accumulator;
@@ -109,79 +50,22 @@ const getActiveAddonsByIds = async (addonIds) => {
 };
 
 const getActiveAddonGroupsByItemIds = async (itemIds) => {
-  if (!itemIds.length) {
-    return {};
-  }
-
+  if (!itemIds.length) return {};
   const query = `
-    SELECT DISTINCT
-      aefi.item_id,
-      aeio.addon_item_id,
-      ag.group_name AS addon_group
+    SELECT DISTINCT aefi.item_id, aeio.addon_item_id, ag.group_name AS addon_group
     FROM addons_eligible_for_items aefi
-    INNER JOIN addon_group_master ag
-      ON ag.id = aefi.group_id
-    INNER JOIN addons_eligible_item_options aeio
-      ON aeio.eligibility_id = aefi.id
-    INNER JOIN addon_item_master aim
-      ON aim.id = aeio.addon_item_id
-     AND aim.group_id = ag.id
-    WHERE aefi.item_id = ANY($1::INT[])
-      AND aefi.is_deleted = 0
-      AND aefi.is_active = 1
-      AND ag.is_deleted = 0
-      AND ag.is_active = 1
-      AND aim.is_deleted = 0
-      AND aim.is_active = 1
+    INNER JOIN addon_group_master ag ON ag.id = aefi.group_id
+    INNER JOIN addons_eligible_item_options aeio ON aeio.eligibility_id = aefi.id
+    INNER JOIN addon_item_master aim ON aim.id = aeio.addon_item_id AND aim.group_id = ag.id
+    WHERE aefi.item_id = ANY($1::INT[]) AND aefi.is_deleted = 0 AND aefi.is_active = 1 AND ag.is_deleted = 0 AND ag.is_active = 1 AND aim.is_deleted = 0 AND aim.is_active = 1;
   `;
-
   const result = await db.query(query, [itemIds]);
-
   return result.rows.reduce((accumulator, row) => {
     const itemId = Number(row.item_id);
     accumulator[itemId] = accumulator[itemId] || [];
     accumulator[itemId].push(row);
     return accumulator;
   }, {});
-};
-
-const getOrdersByCustomerId = async ({ customerId, page, limit }) => {
-  const offset = (page - 1) * limit;
-  const query = `
-    SELECT
-      o.id,
-      o.order_number,
-      o.customer_id,
-      o.customer_name,
-      o.customer_email,
-      o.customer_phone,
-      o.order_status,
-      o.payment_status,
-      o.payment_method,
-      o.currency_code,
-      o.item_count,
-      o.subtotal_amount,
-      o.discount_amount,
-      o.addon_amount,
-      o.tax_amount,
-      o.delivery_fee,
-      o.total_amount,
-      o.order_notes,
-      o.order_type,
-      o.scheduled_datetime,
-      o.scheduled_slot,
-      o.created_at,
-      o.updated_at,
-      COUNT(*) OVER()::INT AS total_records
-    FROM orders o
-    WHERE o.customer_id = $1
-      AND o.is_deleted = 0
-    ORDER BY o.id DESC
-    LIMIT $2 OFFSET $3;
-  `;
-
-  const result = await db.query(query, [customerId, limit, offset]);
-  return result.rows;
 };
 
 const getOrderByIdForCustomer = async ({ orderId, customerId }) => {
@@ -232,15 +116,13 @@ const getOrderByIdForCustomer = async ({ orderId, customerId }) => {
           ORDER BY oi.id
         ) FILTER (WHERE oi.id IS NOT NULL),
         '[]'::json
-      ) AS items
-      ,
+      ) AS items,
       COALESCE(
         (
           SELECT json_agg(
             json_build_object(
               'id', p.id,
               'gateway', p.gateway,
-              'rrn', p.rrn,
               'transaction_id', p.transaction_id,
               'provider_payment_id', p.provider_payment_id,
               'provider_charge_id', p.provider_charge_id,
@@ -262,36 +144,17 @@ const getOrderByIdForCustomer = async ({ orderId, customerId }) => {
             ORDER BY p.id DESC
           )
           FROM payments p
-          WHERE (
-              p.order_id = o.id
-              OR p.metadata->>'orderId' = o.id::TEXT
-              OR EXISTS (
-                SELECT 1
-                FROM pending_payment_checkouts pc
-                WHERE pc.order_id = o.id
-                  AND pc.session_id = COALESCE(
-                    p.raw_event->>'checkoutSessionId',
-                    REPLACE(p.raw_event->>'id', 'checkout_', '')
-                  )
-              )
-            )
-            AND (
-              p.customer_id = o.customer_id
-              OR p.customer_id IS NULL
-              OR p.metadata->>'customerId' = o.customer_id::TEXT
-            )
+          WHERE (p.order_id = o.id OR p.metadata->>'orderId' = o.id::TEXT)
+            AND (p.customer_id = o.customer_id OR p.customer_id IS NULL OR p.metadata->>'customerId' = o.customer_id::TEXT)
         ),
         '[]'::json
       ) AS payments
     FROM orders o
     LEFT JOIN order_items oi ON oi.order_id = o.id
-    WHERE o.id = $1
-      AND o.customer_id = $2
-      AND o.is_deleted = 0
+    WHERE o.id = $1 AND o.customer_id = $2 AND o.is_deleted = 0
     GROUP BY o.id
     LIMIT 1;
   `;
-
   const result = await db.query(query, [orderId, customerId]);
   return normalizeOrder(result.rows[0] || null);
 };
@@ -299,10 +162,10 @@ const getOrderByIdForCustomer = async ({ orderId, customerId }) => {
 const generateOrderNumber = () => {
   const stamp = Date.now().toString().slice(-8);
   const randomPart = Math.floor(Math.random() * 9000 + 1000);
-  return `ORD-${stamp}-${randomPart}`;
+  return `ORD-SCH-${stamp}-${randomPart}`;
 };
 
-const createOrderForCustomer = async ({
+const createScheduledOrderForCustomer = async ({
   customer,
   deliveryAddress,
   orderNotes,
@@ -315,12 +178,10 @@ const createOrderForCustomer = async ({
   taxAmount,
   deliveryFee,
   totalAmount,
-  orderType,
   scheduledDatetime,
   scheduledSlot,
 }) => {
   const client = await db.pool.connect();
-
   try {
     await client.query("BEGIN");
 
@@ -353,7 +214,7 @@ const createOrderForCustomer = async ({
       )
       VALUES (
         $1, $2, $3, $4, $5, 'placed', 'pending', $6, $7, $8, $9, $10, $11, $12,
-        $13, $14, $15, $16::jsonb, $17, $18, $19
+        $13, $14, $15, $16::jsonb, 'SCHEDULED', $17, $18
       )
       RETURNING id;
     `;
@@ -375,7 +236,6 @@ const createOrderForCustomer = async ({
       totalAmount,
       orderNotes,
       JSON.stringify(deliveryAddress || {}),
-      orderType || 'ASAP',
       scheduledDatetime ? new Date(scheduledDatetime) : null,
       scheduledSlot || null,
     ]);
@@ -425,7 +285,7 @@ const createOrderForCustomer = async ({
     }
 
     await client.query("COMMIT");
-    return getOrderByIdForCustomer({ orderId, customerId: customer.id });
+    return await getOrderByIdForCustomer({ orderId, customerId: customer.id });
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -439,7 +299,6 @@ module.exports = {
   getActiveItemsByIds,
   getActiveAddonsByIds,
   getActiveAddonGroupsByItemIds,
-  getOrdersByCustomerId,
+  createScheduledOrderForCustomer,
   getOrderByIdForCustomer,
-  createOrderForCustomer,
 };

@@ -1,5 +1,25 @@
 const db = require("../config/db");
 
+// Self-healing DB check for scheduled order columns
+(async () => {
+  try {
+    await db.query(`
+      ALTER TABLE orders 
+      ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'ASAP';
+    `);
+    await db.query(`
+      ALTER TABLE orders 
+      ADD COLUMN IF NOT EXISTS scheduled_datetime TIMESTAMPTZ NULL;
+    `);
+    await db.query(`
+      ALTER TABLE orders 
+      ADD COLUMN IF NOT EXISTS scheduled_slot VARCHAR(50) NULL;
+    `);
+  } catch (e) {
+    console.error("⚠️ Schema update for scheduled orders columns failed in orderModel.js:", e.message);
+  }
+})();
+
 const ORDER_STATUS_VALUES = [
   "placed",
   "accepted",
@@ -62,7 +82,7 @@ const getOrderList = async ({
   customerId,
   search,
 }) => {
-  const filters = ["o.is_deleted = 0"];
+  const filters = ["o.is_deleted = 0", "COALESCE(o.order_type, 'ASAP') != 'SCHEDULED'"];
   const values = [];
 
   if (status) {
@@ -117,6 +137,9 @@ const getOrderList = async ({
         o.delivery_fee,
         o.total_amount,
         o.order_notes,
+        o.order_type,
+        o.scheduled_datetime,
+        o.scheduled_slot,
         o.created_at,
         o.updated_at
       FROM orders o
@@ -143,6 +166,9 @@ const getOrderList = async ({
       fo.delivery_fee,
       fo.total_amount,
       fo.order_notes,
+      fo.order_type,
+      fo.scheduled_datetime,
+      fo.scheduled_slot,
       fo.created_at,
       fo.updated_at,
       (
@@ -210,6 +236,9 @@ const getOrderList = async ({
       fo.delivery_fee,
       fo.total_amount,
       fo.order_notes,
+      fo.order_type,
+      fo.scheduled_datetime,
+      fo.scheduled_slot,
       fo.created_at,
       fo.updated_at
     ORDER BY fo.id DESC;
@@ -241,6 +270,9 @@ const getOrderById = async (id) => {
       o.total_amount,
       o.order_notes,
       o.delivery_address,
+      o.order_type,
+      o.scheduled_datetime,
+      o.scheduled_slot,
       o.created_at,
       o.updated_at,
       (

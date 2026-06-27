@@ -560,19 +560,25 @@ const getAddonsByItem = async (req, res) => {
     }
 
     const rows = await addonModel.getAddonsByItem(itemId);
-    const groupedMap = rows.reduce((acc, row) => {
-      if (!acc[row.group_id]) {
-        acc[row.group_id] = {
+    const groupsList = [];
+    const groupMap = new Map();
+
+    for (const row of rows) {
+      const groupId = row.group_id;
+      if (!groupMap.has(groupId)) {
+        const groupObj = {
           id: row.eligibility_id,
-          group_id: row.group_id,
+          group_id: groupId,
           addon_group: row.group_name,
           title: row.group_name,
           is_required: Number(row.is_required) === 1,
           options: [],
         };
+        groupMap.set(groupId, groupObj);
+        groupsList.push(groupObj);
       }
 
-      acc[row.group_id].options.push({
+      groupMap.get(groupId).options.push({
         id: row.addon_item_id,
         addonOptionId: row.addon_item_id,
         addon_name: row.addon_item_name,
@@ -581,12 +587,57 @@ const getAddonsByItem = async (req, res) => {
         price: Number(row.price || 0),
         description: row.description,
       });
-      return acc;
-    }, {});
+    }
 
-    return res.status(200).json({ success: true, data: Object.values(groupedMap) });
+    return res.status(200).json({ success: true, data: groupsList });
   } catch (error) {
     console.error("Error fetching add-ons by item:", error);
+    return res.status(500).json({ success: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+const reorderAddonGroups = async (req, res) => {
+  try {
+    const itemId = toPositiveInt(req.body.item_id);
+    const orderedGroupIds = Array.isArray(req.body.group_ids) ? req.body.group_ids : [];
+
+    if (!itemId) {
+      return res.status(400).json({ success: false, message: "item_id is required" });
+    }
+
+    if (!orderedGroupIds.length) {
+      return res.status(400).json({ success: false, message: "group_ids array is required and cannot be empty" });
+    }
+
+    await addonModel.reorderAddonGroups(itemId, orderedGroupIds);
+    await publishAddonChange("reordered", "addon_eligibility", { item_id: itemId });
+
+    return res.status(200).json({ success: true, message: "Add-on groups order updated successfully" });
+  } catch (error) {
+    console.error("Error reordering add-on groups:", error);
+    return res.status(500).json({ success: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+const reorderAddonItems = async (req, res) => {
+  try {
+    const eligibilityId = toPositiveInt(req.body.eligibility_id);
+    const orderedAddonItemIds = Array.isArray(req.body.addon_item_ids) ? req.body.addon_item_ids : [];
+
+    if (!eligibilityId) {
+      return res.status(400).json({ success: false, message: "eligibility_id is required" });
+    }
+
+    if (!orderedAddonItemIds.length) {
+      return res.status(400).json({ success: false, message: "addon_item_ids array is required and cannot be empty" });
+    }
+
+    await addonModel.reorderAddonItems(eligibilityId, orderedAddonItemIds);
+    await publishAddonChange("reordered", "addon_eligibility", { id: eligibilityId });
+
+    return res.status(200).json({ success: true, message: "Add-on items order updated successfully" });
+  } catch (error) {
+    console.error("Error reordering add-on items:", error);
     return res.status(500).json({ success: false, message: error.message || "Internal Server Error" });
   }
 };
@@ -618,5 +669,7 @@ module.exports = {
   updateEligibility,
   deleteEligibility,
   getAddonsByItem,
+  reorderAddonGroups,
+  reorderAddonItems,
   
 };
